@@ -17,9 +17,9 @@
   .tab.active{background:linear-gradient(135deg,#1a56db,#1e429f);color:#fff}
   .stats{display:flex;gap:10px;padding:12px 24px;overflow-x:auto;background:#e8edf2;border-bottom:1px solid #cbd5e0}
   .stat{background:#ffffff;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
-  .panel{display:none;padding:16px 24px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:14px}
+  .panel{display:none;padding:12px 20px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:10px}
   .panel.active{display:flex}
-  .card{background:#ffffff;border:1px solid #cbd5e0;border-radius:12px;padding:18px 20px}
+  .card{background:#ffffff;border:1px solid #cbd5e0;border-radius:12px;padding:12px 16px}
   .card h3{font-size:13px;color:#1a56db;font-weight:600;margin-bottom:12px}
   .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
   .msg-user{background:linear-gradient(135deg,#1e40af,#1e429f);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
@@ -113,7 +113,9 @@ function groupBy(field, limit) {
   limit = limit || 12;
   var c = {};
   sheetData.forEach(function(r) {
-    var v = get(r, field) || "Unknown";
+    var v = (r[field] || "").trim();
+    // Skip empty, URLs, long strings (junk data)
+    if (!v || v.length > 50 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
     c[v] = (c[v] || 0) + 1;
   });
   return Object.entries(c).sort(function(a,b){ return b[1]-a[1]; }).slice(0, limit);
@@ -168,7 +170,11 @@ function buildPrompt() {
     "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
     (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
-    "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.";
+    "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.
+
+IMPORTANT: When the user asks for a chart, graph, bar chart, pie chart or visual, respond ONLY with this exact JSON (no other text):
+{"chart": true, "type": "bar", "title": "Title Here", "labels": ["A","B"], "values": [10,20]}
+Use type bar for bar charts, doughnut for pie charts. For all other questions respond in plain text.";
 }
 
 // SEND TO GEMINI
@@ -224,6 +230,17 @@ async function sendMessage(prefill) {
 }
 
 // RENDER MESSAGES
+var inlineChartCount = 0;
+function tryParseChart(text) {
+  try {
+    var t = text.trim().replace(/```json|```/g,"").trim();
+    if (t.charAt(0) !== "{") return null;
+    var p = JSON.parse(t);
+    if (p.chart === true && p.labels && p.values) return p;
+  } catch(e) {}
+  return null;
+}
+
 function renderMessages() {
   var box = document.getElementById("messages");
   if (!box) return;
@@ -233,15 +250,52 @@ function renderMessages() {
   }
   box.innerHTML = messages.map(function(m) {
     var isUser = m.role === "user";
-    var text = m.parts[0].text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    var text = m.parts[0].text;
     if (isUser) {
-      return '<div class="msg-user">' + text + '</div>';
-    } else {
-      return '<div class="msg-ai"><div class="msg-label">AI ANALYST</div>' + text + '</div>';
+      var safe = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      return '<div class="msg-user">' + safe + '</div>';
     }
+    var chartData = tryParseChart(text);
+    if (chartData) {
+      inlineChartCount++;
+      var cid = "inlineChart" + inlineChartCount;
+      setTimeout(function(id, d){ return function(){ renderInlineChart(id, d); }; }(cid, chartData), 150);
+      return '<div class="msg-ai"><div class="msg-label">AI ANALYST — CHART</div>' +
+        '<p style="font-weight:600;color:#1a202c;font-size:13px;margin-bottom:8px">' + (chartData.title||"Chart") + '</p>' +
+        '<div style="background:#f7fafc;border-radius:8px;padding:10px">' +
+        '<canvas id="' + cid + '" height="140"></canvas></div></div>';
+    }
+    var safe2 = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return '<div class="msg-ai"><div class="msg-label">AI ANALYST</div>' + safe2 + '</div>';
   }).join("");
   var last = box.lastElementChild;
   if (last) last.scrollIntoView({ behavior: "smooth" });
+}
+
+function renderInlineChart(cid, data) {
+  var canvas = document.getElementById(cid);
+  if (!canvas) return;
+  var ctx = canvas.getContext("2d");
+  var COLORS = ["#1a56db","#fb923c","#34d399","#f87171","#38bdf8","#a78bfa","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
+  var type = data.type || "bar";
+  new Chart(ctx, {
+    type: type,
+    data: {
+      labels: data.labels,
+      datasets: [{ data: data.values, backgroundColor: COLORS, borderRadius: type==="bar"?5:0, borderWidth: 0 }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: type!=="bar", position:"right", labels:{ font:{size:11}, color:"#4a5568", padding:8, boxWidth:12 } },
+        tooltip: { backgroundColor:"#1e1e3a", titleColor:"#a78bfa", bodyColor:"#e2e8f0" }
+      },
+      scales: type==="bar" ? {
+        x: { ticks:{ color:"#718096", font:{size:10} }, grid:{ color:"#e2e8f0" } },
+        y: { ticks:{ color:"#718096", font:{size:10} }, grid:{ color:"#e2e8f0" } }
+      } : {}
+    }
+  });
 }
 
 function setLoading(on) {
@@ -323,7 +377,7 @@ function makePie(id, data) {
     options: {
       responsive: true,
       plugins: {
-        legend: { position:"bottom", labels:{ color:"#94a3b8", font:{size:11} } },
+        legend: { position:"right", labels:{ color:"#4a5568", font:{size:11}, padding:10, boxWidth:12 } },
         tooltip: { backgroundColor:"#e2e8f0", titleColor:"#1a56db", bodyColor:"#e2e8f0" }
       }
     }
@@ -465,15 +519,15 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 
 <!-- CHARTS PANEL -->
 <div id="panel-charts" class="panel">
-  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="120"></canvas></div>
+  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="90"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>BU Split</h3><canvas id="cBU" height="180"></canvas></div>
-    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="180"></canvas></div>
+    <div class="card"><h3>BU Split</h3><canvas id="cBU" height="140"></canvas></div>
+    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="140"></canvas></div>
   </div>
-  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="80"></canvas></div>
+  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="70"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="140"></canvas></div>
-    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="140"></canvas></div>
+    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="110"></canvas></div>
+    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="110"></canvas></div>
   </div>
 </div>
 
