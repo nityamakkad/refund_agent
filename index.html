@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Refund Intelligence Agent</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+<style>
+  *{margin:0;padding:0;box-sizing:border-box;font-family:'DM Sans',sans-serif}
+  body{background:#0a0a12;color:#e2e8f0;min-height:100vh}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#1e1e3a;border-radius:3px}
+  .header{background:linear-gradient(135deg,#12122a,#1a1040);border-bottom:1px solid #1e1e3a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap}
+  .tab{padding:7px 15px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:#1a1a2e;color:#64748b}
+  .tab.active{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff}
+  .stats{display:flex;gap:10px;padding:12px 24px;overflow-x:auto;background:#0d0d1a;border-bottom:1px solid #1e1e3a}
+  .stat{background:#13131f;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
+  .panel{display:none;padding:16px 24px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:14px}
+  .panel.active{display:flex}
+  .card{background:#13131f;border:1px solid #1e1e3a;border-radius:12px;padding:18px 20px}
+  .card h3{font-size:13px;color:#a78bfa;font-weight:600;margin-bottom:12px}
+  .messages{flex:1;overflow-y:auto;background:#0d0d1a;border-radius:12px;padding:16px;border:1px solid #1e1e3a;display:flex;flex-direction:column;gap:10px}
+  .msg-user{background:linear-gradient(135deg,#4338ca,#6d28d9);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap}
+  .msg-ai{background:#13131f;border:1px solid #1e1e3a;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap}
+  .msg-label{font-size:10px;color:#6366f1;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
+  .input-row{display:flex;gap:10px}
+  .chat-input{flex:1;background:#13131f;border:1px solid #2d2d4e;border-radius:10px;padding:11px 16px;color:#e2e8f0;font-size:13px}
+  .chat-input:focus{outline:none;border-color:#6366f1}
+  .send-btn{background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:10px;padding:11px 20px;color:#fff;cursor:pointer;font-weight:700;font-size:13px}
+  .send-btn:disabled{opacity:.5;cursor:not-allowed}
+  .pills{display:flex;flex-wrap:wrap;gap:6px}
+  .pill{background:#13131f;border:1px solid #1e1e3a;color:#a78bfa;border-radius:20px;padding:5px 13px;font-size:11px;cursor:pointer;font-weight:500}
+  .pill:hover{background:#1e1e3a}
+  .refresh-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1a2e1a;color:#34d399}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .full{grid-column:1/-1}
+  table{width:100%;border-collapse:collapse;font-size:12px}
+  th{padding:11px 14px;text-align:left;color:#a78bfa;font-weight:600;font-size:11px;background:#0d0d1a;border-bottom:2px solid #1e1e3a}
+  td{padding:10px 14px;border-bottom:1px solid #1a1a2e}
+  tr:nth-child(even){background:#0f0f1a}
+  .badge{border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600}
+  .dots{display:none;align-items:center;gap:6px;padding:4px 8px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#6366f1}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;color:#334155}
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
+  @media(max-width:600px){.grid2{grid-template-columns:1fr}.full{grid-column:1}}
+</style>
+</head>
+<body>
+
+<script>
+// ══════════════════════════════════════════════
+//  PASTE YOUR VALUES HERE — ONLY 2 THINGS NEEDED
+// ══════════════════════════════════════════════
+const GEMINI_API_KEY = "AIzaSyDDBOVFD046SNALNJsyTDarOhwVG9ac3w0";
+const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSD8bte7C0C0I0b7W1Mo9barNOrYktRFZ3suDw2bBOJYzSHv-L2C74CvdsnDXPAkyT3S340PPXP9mBv/pub?gid=1624835958&single=true&output=csv";
+// ══════════════════════════════════════════════
+
+let sheetData = [];
+let messages  = [];
+let charts    = {};
+
+// ── PARSE CSV ──────────────────────────────────
+function parseCSV(text) {
+  const lines = text.trim().split("\n");
+  const headers = splitCSVLine(lines[0]);
+  return lines.slice(1).map(line => {
+    const vals = splitCSVLine(line);
+    const obj = {};
+    headers.forEach((h, i) => obj[h.trim()] = (vals[i] || "").trim());
+    return obj;
+  });
+}
+function splitCSVLine(line) {
+  const result = []; let cur = ""; let inQ = false;
+  for (let ch of line) {
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+// ── FETCH SHEET ────────────────────────────────
+async function fetchSheet() {
+  document.getElementById("refreshBtn").textContent = "⏳ Loading…";
+  try {
+    const res = await fetch(SHEET_CSV_URL + "&t=" + Date.now());
+    const text = await res.text();
+    sheetData = parseCSV(text);
+    updateStats(); renderCharts(); renderFlexipay();
+    showToast("✅ Sheet refreshed — " + sheetData.length + " records loaded");
+  } catch(e) {
+    showToast("❌ Could not load sheet. Check the URL in your code.", true);
+  }
+  document.getElementById("refreshBtn").textContent = "🔄 Refresh Data";
+}
+
+// ── HELPERS ────────────────────────────────────
+const get = (r, k) => (r[k] || "").trim();
+const parseAmt = s => parseFloat((s||"").replace(/,/g,"")) || 0;
+function groupBy(field, limit=12) {
+  const c={};
+  sheetData.forEach(r=>{ const v=get(r,field)||"Unknown"; c[v]=(c[v]||0)+1; });
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).slice(0,limit);
+}
+function count(field, val) {
+  return sheetData.filter(r => get(r,field).toLowerCase()===val.toLowerCase()).length;
+}
+
+// ── BUILD GEMINI SYSTEM PROMPT ─────────────────
+function buildPrompt() {
+  const total = sheetData.length;
+  const refunded = sheetData.reduce((s,r)=>s+parseAmt(get(r,"Amount refunded")),0);
+  const credited = sheetData.reduce((s,r)=>s+parseAmt(get(r,"Amount Credited")),0);
+  const fmt = arr => arr.map(([k,v])=>`  • ${k}: ${v}`).join("\n");
+  const flex = sheetData.filter(r=>get(r,"Flexipay (Yes / No)").toLowerCase()==="yes");
+  const flexDetails = flex.map(r=>{
+    const name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: "+get(r,"Hubspot id");
+    return `  • ${name} | Credited: $${get(r,"Amount Credited")} | Refunded: $${get(r,"Amount refunded")} | Window: ${get(r,"Refund period Bucket")} | Category: ${get(r,"Refund Category")} | Course: ${get(r,"Course")}`;
+  }).join("\n");
+
+  return `You are an expert EdTech Refund Data Analyst. You have LIVE data from a Google Sheet with ${total} refund records. Be precise, data-driven, and use bullet points or tables when helpful.
+
+DATASET OVERVIEW:
+- Total Records: ${total} | All sales: Dropped
+- Total Amount Refunded: $${refunded.toLocaleString()}
+- Total Originally Credited: $${credited.toLocaleString()}
+
+REFUND CATEGORIES:
+${fmt(groupBy("Refund Category"))}
+
+BY COURSE:
+${fmt(groupBy("Course",10))}
+
+BY BU:
+${fmt(groupBy("BU"))}
+
+BY PAYMENT MODE:
+${fmt(groupBy("Payment Mode"))}
+
+PROGRAM CATEGORY:
+${fmt(groupBy("Category",8))}
+
+TRIAL WINDOW:
+- In Trial Window: ${count("Refund request received in Trial Window","yes")}
+- Outside Trial Window: ${count("Refund request received in Trial Window","no")}
+
+POLICY ELIGIBILITY:
+- Eligible: ${count("Eligible as per refund policy","yes")} | Not eligible (exceptions): ${count("Eligible as per refund policy","no")}
+
+NEW vs ALUMNI:
+- New: ${count("New / Alumni","new")} | Alumni: ${count("New / Alumni","alumni")}
+
+ONBOARDING STATUS:
+${fmt(groupBy("OB Status",6))}
+
+TOP PROGRAM ADVISORS (PAs):
+${fmt(groupBy("PA",8))}
+
+TOP MANAGERS:
+${fmt(groupBy("Manager",8))}
+
+FLEXIPAY LEARNERS (${flex.length} total — pay in monthly installments, Amount Credited = one installment only):
+${flexDetails}
+
+PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with "v1:" — both formats are valid.
+
+SAMPLE RECORDS (for individual lookups):
+${sheetData.slice(0,60).map(r=>{
+  const name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:"+get(r,"Hubspot id");
+  return `${name} | ${get(r,"Course")} | $${get(r,"Amount refunded")} | ${get(r,"Refund Category")} | ${get(r,"BU")} | PA:${get(r,"PA")} | Manager:${get(r,"Manager")}`;
+}).join("\n")}
+${sheetData.length > 60 ? `...and ${sheetData.length-60} more records` : ""}
+
+Answer every question with specific numbers from this data. If asked about a specific learner, give full details. Always be actionable and insightful.`;
+}
+
+// ── SEND TO GEMINI ─────────────────────────────
+async function sendMessage(prefill) {
+  const input = document.getElementById("chatInput");
+  const text = prefill || input.value.trim();
+  if (!text) return;
+  input.value = "";
+
+  messages.push({role:"user", parts:[{text}]});
+  renderMessages();
+  setLoading(true);
+
+  try {
+    const body = {
+      system_instruction: { parts:[{text: buildPrompt()}] },
+      contents: messages
+    };
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`,
+      { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body) }
+    );
+    const data = await res.json();
+    const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "No response received.";
+    messages.push({role:"model", parts:[{text:reply}]});
+  } catch(e) {
+    messages.push({role:"model", parts:[{text:"Connection error. Please try again."}]});
+  }
+
+  setLoading(false);
+  renderMessages();
+}
+
+// ── RENDER MESSAGES ────────────────────────────
+function renderMessages() {
+  const box = document.getElementById("messages");
+  if (messages.length === 0) {
+    box.innerHTML = `<div class="empty"><div style="font-size:52px;margin-bottom:12px">🤖</div><p style="font-size:15px;color:#475569;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p></div>`;
+    return;
+  }
+  box.innerHTML = messages.map(m => {
+    const isUser = m.role === "user";
+    const text = m.parts[0].text.replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return `<div class="${isUser?"msg-user":"msg-ai"}">${isUser?"":
+      '<div class="msg-label">AI ANALYST</div>'}${text}</div>`;
+  }).join("");
+  box.lastElementChild?.scrollIntoView({behavior:"smooth"});
+}
+
+function setLoading(on) {
+  document.getElementById("sendBtn").disabled = on;
+  document.getElementById("loadingDots").style.display = on ? "flex" : "none";
+}
+
+// ── STAT CARDS ─────────────────────────────────
+function updateStats() {
+  const total = sheetData.length;
+  const refunded = sheetData.reduce((s,r)=>s+parseAmt(get(r,"Amount refunded")),0);
+  const inTrial = count("Refund request received in Trial Window","yes");
+  const flex = sheetData.filter(r=>get(r,"Flexipay (Yes / No)").toLowerCase()==="yes").length;
+  const pa_missell = sheetData.filter(r=>get(r,"Refund Category").includes("PA Mis-sell")).length;
+  const ai = sheetData.filter(r=>get(r,"BU")==="AI").length;
+
+  const s = [{l:"Total Refunds",v:total,c:"#818cf8",i:"↩"},
+    {l:"Total Refunded",v:"$"+Math.round(refunded/1000)+"K",c:"#f87171",i:"💸"},
+    {l:"In Trial Window",v:Math.round(inTrial/total*100)+"%",c:"#34d399",i:"⏱"},
+    {l:"Flexipay Learners",v:flex,c:"#fbbf24",i:"💳"},
+    {l:"PA Mis-sell",v:pa_missell,c:"#e879f9",i:"⚠️"},
+    {l:"AI BU Refunds",v:ai,c:"#38bdf8",i:"🤖"}];
+
+  document.getElementById("statsBar").innerHTML = s.map(x=>
+    `<div class="stat" style="border:1px solid ${x.c}22">
+      <div style="font-size:16px">${x.i}</div>
+      <div style="font-size:20px;font-weight:700;color:${x.c}">${x.v}</div>
+      <div style="font-size:10px;color:#475569;margin-top:2px">${x.l}</div>
+    </div>`).join("");
+}
+
+// ── CHARTS ─────────────────────────────────────
+const COLORS=["#818cf8","#fb923c","#34d399","#f87171","#38bdf8","#a78bfa","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
+const TOPTS={responsive:true,plugins:{legend:{display:false},tooltip:{backgroundColor:"#1e1e3a",titleColor:"#a78bfa",bodyColor:"#e2e8f0"}},scales:{x:{ticks:{color:"#64748b",font:{size:11}},grid:{color:"#1e1e3a"}},y:{ticks:{color:"#64748b",font:{size:11}},grid:{color:"#1e1e3a"}}}};
+
+function makeBar(id, data, horizontal=false) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id)?.getContext("2d");
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, {type:"bar", data:{
+    labels:data.map(d=>d[0]),
+    datasets:[{data:data.map(d=>d[1]),backgroundColor:COLORS,borderRadius:5}]
+  }, options:{...TOPTS, indexAxis:horizontal?"y":"x"}});
+}
+function makePie(id, data) {
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id)?.getContext("2d");
+  if(!ctx) return;
+  charts[id] = new Chart(ctx, {type:"doughnut", data:{
+    labels:data.map(d=>d[0]),
+    datasets:[{data:data.map(d=>d[1]),backgroundColor:COLORS,borderWidth:0}]
+  }, options:{responsive:true,plugins:{legend:{position:"bottom",labels:{color:"#94a3b8",font:{size:11}}},tooltip:{backgroundColor:"#1e1e3a",titleColor:"#a78bfa",bodyColor:"#e2e8f0"}}}});
+}
+function renderCharts() {
+  makeBar("cCat", groupBy("Refund Category",12), true);
+  makeBar("cCourse", groupBy("Course",10));
+  makeBar("cPay", groupBy("Payment Mode"));
+  makeBar("cPcat", groupBy("Category",8));
+  makePie("cBU", groupBy("BU"));
+  makePie("cTrial",[
+    ["In Trial", count("Refund request received in Trial Window","yes")],
+    ["Outside Trial", count("Refund request received in Trial Window","no")]
+  ]);
+}
+
+// ── FLEXIPAY TABLE ─────────────────────────────
+function renderFlexipay() {
+  const flex = sheetData.filter(r=>get(r,"Flexipay (Yes / No)").toLowerCase()==="yes");
+  let tc=0, tr=0;
+  document.getElementById("flexBody").innerHTML = flex.map((r,i)=>{
+    const name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: "+get(r,"Hubspot id");
+    const c=parseAmt(get(r,"Amount Credited")), rf=parseAmt(get(r,"Amount refunded"));
+    tc+=c; tr+=rf;
+    const d=rf-c;
+    const flag = rf>c?`<span class="badge" style="background:#f8717122;color:#f87171">⚠ OVER</span>`:
+      rf===0?`<span class="badge" style="background:#47556922;color:#94a3b8">NO REFUND</span>`:
+      rf<c?`<span class="badge" style="background:#fbbf2422;color:#fbbf24">PARTIAL</span>`:
+      `<span class="badge" style="background:#34d39922;color:#34d399">FULL</span>`;
+    return `<tr>
+      <td style="color:#475569">${i+1}</td>
+      <td style="color:#e2e8f0;font-weight:500">${name}</td>
+      <td style="color:#94a3b8">${get(r,"Course")||"—"}</td>
+      <td style="color:#34d399;font-weight:600">$${c.toLocaleString()}</td>
+      <td style="color:${rf>c?"#f87171":rf===0?"#475569":"#fbbf24"};font-weight:700">${rf===0?"—":"$"+rf.toLocaleString()}</td>
+      <td style="color:${d>0?"#f87171":d<0?"#34d399":"#94a3b8"};font-weight:700">${d===0?"±0":d>0?"+$"+d.toLocaleString():"-$"+Math.abs(d).toLocaleString()}</td>
+      <td style="color:#94a3b8">${get(r,"Refund period Bucket")||"—"}</td>
+      <td><span style="background:#1e1e3a;border-radius:6px;padding:3px 8px;font-size:10px;color:#94a3b8">${get(r,"Refund Category")||"—"}</span></td>
+      <td>${flag}</td></tr>`;
+  }).join("");
+  document.getElementById("flexSummary").innerHTML =
+    `<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">
+      <div><div style="font-size:10px;color:#475569">Learners</div><div style="font-size:22px;font-weight:700;color:#a78bfa">${flex.length}</div></div>
+      <div><div style="font-size:10px;color:#475569">Total Credited</div><div style="font-size:22px;font-weight:700;color:#34d399">$${tc.toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:#475569">Total Refunded</div><div style="font-size:22px;font-weight:700;color:#f87171">$${tr.toLocaleString()}</div></div>
+      <div><div style="font-size:10px;color:#475569">Net Δ</div><div style="font-size:22px;font-weight:700;color:${tr>tc?"#f87171":"#34d399"}">${tr>tc?"+":""} $${(tr-tc).toLocaleString()}</div></div>
+    </div>`;
+}
+
+// ── TAB SWITCH ─────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.dataset.tab===t));
+  document.querySelectorAll(".panel").forEach(el=>el.classList.toggle("active",el.id==="panel-"+t));
+}
+
+function showToast(msg, err=false) {
+  const t=document.createElement("div");
+  Object.assign(t.style,{position:"fixed",bottom:"20px",right:"20px",background:err?"#f87171":"#6366f1",color:"#fff",padding:"10px 18px",borderRadius:"8px",fontSize:"13px",zIndex:999,fontWeight:600,boxShadow:"0 4px 20px rgba(0,0,0,.4)"});
+  t.textContent=msg; document.body.appendChild(t);
+  setTimeout(()=>t.remove(),3000);
+}
+
+window.addEventListener("DOMContentLoaded",()=>{ fetchSheet(); });
+</script>
+
+<!-- ── HTML STRUCTURE ── -->
+<div class="header">
+  <div style="display:flex;align-items:center;gap:10px">
+    <div class="logo">📊</div>
+    <div>
+      <h1 style="font-size:18px;font-weight:700;color:#c4b5fd">Refund Intelligence Agent</h1>
+      <p style="font-size:11px;color:#475569">Live from Google Sheets · EdTech Refund Analytics</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <div class="tabs">
+      <button class="tab active" data-tab="chat"     onclick="switchTab('chat')">💬 Chat</button>
+      <button class="tab"        data-tab="charts"   onclick="switchTab('charts')">📈 Charts</button>
+      <button class="tab"        data-tab="flexipay" onclick="switchTab('flexipay')">💳 Flexipay</button>
+      <button class="tab"        data-tab="insights" onclick="switchTab('insights')">🧠 Insights</button>
+    </div>
+    <button id="refreshBtn" class="refresh-btn" onclick="fetchSheet()">🔄 Refresh Data</button>
+  </div>
+</div>
+
+<div id="statsBar" class="stats"></div>
+
+<!-- CHAT -->
+<div id="panel-chat" class="panel active">
+  <div class="pills">
+    <span class="pill" onclick="sendMessage('Give me an executive summary of Q4 refunds')">Executive summary</span>
+    <span class="pill" onclick="sendMessage('What are the top 5 refund reasons with counts?')">Top refund reasons</span>
+    <span class="pill" onclick="sendMessage('Analyse all PA Mis-sell cases in detail')">PA Mis-sell analysis</span>
+    <span class="pill" onclick="sendMessage('Show me all Flexipay learner details')">Flexipay details</span>
+    <span class="pill" onclick="sendMessage('Which course has the most refunds and why?')">Course analysis</span>
+    <span class="pill" onclick="sendMessage('How many refunds happened within the trial window?')">Trial window stats</span>
+    <span class="pill" onclick="sendMessage('What is the total amount refunded and credited?')">Total amounts</span>
+    <span class="pill" onclick="sendMessage('What actions should we take to reduce refunds?')">Action plan</span>
+    <span class="pill" onclick="sendMessage('Break down refunds by BU and program category')">BU breakdown</span>
+    <span class="pill" onclick="sendMessage('Which manager has the most refund cases?')">Manager analysis</span>
+  </div>
+  <div id="messages" class="messages"></div>
+  <div id="loadingDots" class="dots">
+    <div class="dot" style="animation:pulse 1.2s ease-in-out 0s infinite"></div>
+    <div class="dot" style="animation:pulse 1.2s ease-in-out 0.2s infinite"></div>
+    <div class="dot" style="animation:pulse 1.2s ease-in-out 0.4s infinite"></div>
+    <span style="font-size:11px;color:#475569;margin-left:4px">Analysing…</span>
+  </div>
+  <div class="input-row">
+    <input id="chatInput" class="chat-input" placeholder="Ask anything about your refund data…" onkeydown="if(event.key==='Enter')sendMessage()"/>
+    <button id="sendBtn" class="send-btn" onclick="sendMessage()">Send →</button>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div id="panel-charts" class="panel" style="overflow-y:auto">
+  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="120"></canvas></div>
+  <div class="grid2">
+    <div class="card"><h3>BU Split</h3><canvas id="cBU" height="180"></canvas></div>
+    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="180"></canvas></div>
+  </div>
+  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="80"></canvas></div>
+  <div class="grid2">
+    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="140"></canvas></div>
+    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="140"></canvas></div>
+  </div>
+</div>
+
+<!-- FLEXIPAY -->
+<div id="panel-flexipay" class="panel">
+  <div class="card" style="border-color:#fbbf2422">
+    <h3 style="color:#fbbf24;font-size:15px">💳 Flexipay — How It Works</h3>
+    <p style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:14px">Flexipay learners pay in monthly installments (~$1,000/month) under a 0% APR plan. <strong style="color:#e2e8f0">Amount Credited = one installment only</strong>, not the full program price. When refunded &gt; credited, the EMI provider must write off remaining balance.</p>
+    <div id="flexSummary"></div>
+  </div>
+  <div style="overflow-x:auto;border-radius:12px;border:1px solid #1e1e3a">
+    <table>
+      <thead><tr><th>#</th><th>Learner / ID</th><th>Course</th><th>Credited</th><th>Refunded</th><th>Δ</th><th>Window</th><th>Category</th><th>Flag</th></tr></thead>
+      <tbody id="flexBody"></tbody>
+    </table>
+  </div>
+  <div class="card" style="border-color:#f8717133">
+    <p style="font-size:13px;color:#f87171;font-weight:700;margin-bottom:6px">⚠️ Finance Alert</p>
+    <p style="font-size:12px;color:#94a3b8;line-height:1.7">Cases where refunded &gt; credited mean the full program refund was approved even though only one installment was collected. Confirm write-off confirmation is received from the EMI provider for each flagged case.</p>
+  </div>
+</div>
+
+<!-- INSIGHTS -->
+<div id="panel-insights" class="panel">
+  <div class="grid2">
+    <div class="card" style="border-color:#f8717122"><h3 style="color:#f87171">🔴 PA Mis-sell Cases</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">PAs incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#e2e8f0">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p></div>
+    <div class="card" style="border-color:#fbbf2422"><h3 style="color:#fbbf24">🟡 76% Drop in Trial Window</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">Most learners drop before attending even 2 live classes. <strong style="color:#e2e8f0">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p></div>
+    <div class="card" style="border-color:#38bdf822"><h3 style="color:#38bdf8">🔵 Flagship ML — Highest Refunds</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">27 refunds — highest in absolute count. <strong style="color:#e2e8f0">Action:</strong> Cross-reference with enrollment numbers. If refund rate is disproportionate, investigate early-class quality and PA expectation-setting.</p></div>
+    <div class="card" style="border-color:#34d39922"><h3 style="color:#34d399">🟢 Content/Curriculum — 15 Cases</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">Learners found content too basic or misaligned with FAANG goals. <strong style="color:#e2e8f0">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p></div>
+    <div class="card" style="border-color:#a78bfa22"><h3 style="color:#a78bfa">🟣 Financial Hardship — Top Driver</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">27 cases driven by visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#e2e8f0">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p></div>
+    <div class="card" style="border-color:#fb923c22"><h3 style="color:#fb923c">🟠 41 Policy Exceptions Approved</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">41 refunds approved outside normal policy — signals ad-hoc exception-making. <strong style="color:#e2e8f0">Action:</strong> Define formal exception criteria with documented approver accountability.</p></div>
+    <div class="card" style="border-color:#e879f922"><h3 style="color:#e879f9">🔴 8 Learners Unreachable at OB</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">8 learners show "VM - 4 Attempts" — never reached at onboarding. <strong style="color:#e2e8f0">Action:</strong> Verify contact info at enrollment; use WhatsApp as backup; improve sales-to-OB handoff.</p></div>
+    <div class="card" style="border-color:#94a3b822"><h3 style="color:#94a3b8">💡 H1B Visa — US Cohort Risk</h3><p style="font-size:12px;color:#94a3b8;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason — a macro external risk. <strong style="color:#e2e8f0">Action:</strong> Communicate deferral flexibility proactively to at-risk learners; add geo-specific clauses.</p></div>
+  </div>
+</div>
+
+</body>
+</html>
