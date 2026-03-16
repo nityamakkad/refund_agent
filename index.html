@@ -87,7 +87,7 @@ async function fetchSheet() {
   var btn = document.getElementById("refreshBtn");
   if (btn) btn.textContent = "⏳ Loading…";
   try {
-    var res = await fetch(SHEET_CSV_URL + "&t=" + Date.now());
+    var res = await fetch("https://corsproxy.io/?" + encodeURIComponent(SHEET_CSV_URL));
     var text = await res.text();
     sheetData = parseCSV(text);
     updateStats();
