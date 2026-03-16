@@ -114,11 +114,19 @@ function groupBy(field, limit) {
   var c = {};
   sheetData.forEach(function(r) {
     var v = (r[field] || "").trim();
-    // Skip empty, URLs, long strings (junk data)
-    if (!v || v.length > 50 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
+    // Skip empty, URLs, long strings, values with spaces that look like names (for payment mode)
+    if (!v || v.length > 40 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
     c[v] = (c[v] || 0) + 1;
   });
-  return Object.entries(c).sort(function(a,b){ return b[1]-a[1]; }).slice(0, limit);
+  // Remove outliers — only keep values that appear more than once OR are top results
+  var entries = Object.entries(c).sort(function(a,b){ return b[1]-a[1]; });
+  // Filter out values with count of 1 that look like names (contain spaces and mixed case)
+  entries = entries.filter(function(e){
+    if (e[1] >= 2) return true;
+    // Allow single-count if it looks like a valid category (all caps, underscores, numbers)
+    return /^[A-Z0-9%_ ]+$/.test(e[0]);
+  });
+  return entries.slice(0, limit);
 }
 function countVal(field, val) {
   return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
@@ -401,7 +409,10 @@ function renderCharts() {
   makeBar("cCourse", groupBy("Course", 10), false);
   makeBar("cPay", groupBy("Payment Mode", 10), false);
   makeBar("cPcat", groupBy("Category", 8), false);
-  makePie("cBU", groupBy("BU"));
+  makePie("cBU", [
+    ["Upfront - Yes", countVal("Upfront Payment (Yes / No)","yes")],
+    ["Upfront - No", countVal("Upfront Payment (Yes / No)","no")]
+  ]);
   makePie("cTrial", [
     ["In Trial", countVal("Refund request received in Trial Window","yes")],
     ["Outside Trial", countVal("Refund request received in Trial Window","no")]
@@ -531,15 +542,19 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 
 <!-- CHARTS PANEL -->
 <div id="panel-charts" class="panel">
-  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="90"></canvas></div>
+  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="75"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>BU Split</h3><canvas id="cBU" height="140"></canvas></div>
-    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="140"></canvas></div>
+    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="120"></canvas></div>
+    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="120"></canvas></div>
   </div>
-  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="70"></canvas></div>
+  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="60"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="110"></canvas></div>
-    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="110"></canvas></div>
+    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="90"></canvas></div>
+    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="90"></canvas></div>
+  </div>
+  <div class="grid2">
+    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="110"></canvas></div>
+    <div class="card"><h3>Region</h3><canvas id="cRegion" height="110"></canvas></div>
   </div>
 </div>
 
