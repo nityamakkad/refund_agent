@@ -296,7 +296,7 @@ function renderInlineChart(cid, data) {
   var canvas = document.getElementById(cid);
   if (!canvas) return;
   var ctx = canvas.getContext("2d");
-  var COLORS = ["#2563eb","#64748b","#0ea5e9","#475569","#3b82f6","#94a3b8","#1d4ed8","#334155","#7c3aed","#6b7280","#0284c7","#1e3a5f"];
+  var COLORS = ["#2563eb","#3b82f6","#60a5fa","#93c5fd","#1d4ed8","#1e40af","#475569","#64748b","#94a3b8","#cbd5e1","#0ea5e9","#0284c7"];
   var type = data.type || "bar";
   new Chart(ctx, {
     type: type,
@@ -377,12 +377,19 @@ function makeBar(id, data, horizontal) {
     type: "bar",
     data: {
       labels: data.map(function(d){ return d[0]; }),
-      datasets: [{ data: data.map(function(d){ return d[1]; }), backgroundColor: COLORS, borderRadius: 5 }]
+      datasets: [{
+        data: data.map(function(d){ return d[1]; }),
+        backgroundColor: "#2563eb",
+        hoverBackgroundColor: "#1d4ed8",
+        borderRadius: 4,
+        borderSkipped: false
+      }]
     },
     options: Object.assign({}, TOPTS, { indexAxis: horizontal ? "y" : "x" })
   });
 }
 
+var PIE_COLORS = ["#2563eb","#93c5fd","#1e40af","#bfdbfe","#3b82f6","#dbeafe"];
 function makePie(id, data) {
   if (charts[id]) charts[id].destroy();
   var canvas = document.getElementById(id);
@@ -392,18 +399,18 @@ function makePie(id, data) {
     type: "doughnut",
     data: {
       labels: data.map(function(d){ return d[0]; }),
-      datasets: [{ data: data.map(function(d){ return d[1]; }), backgroundColor: COLORS, borderWidth: 0 }]
+      datasets: [{ data: data.map(function(d){ return d[1]; }), backgroundColor: PIE_COLORS, borderWidth: 2, borderColor: "#f8fafc" }]
     },
     options: {
       responsive: true,
+      cutout: "60%",
       plugins: {
-        legend: { position:"right", labels:{ color:"#4a5568", font:{size:11}, padding:10, boxWidth:12 } },
-        tooltip: { backgroundColor:"#e2e8f0", titleColor:"#1a56db", bodyColor:"#e2e8f0" }
+        legend: { position:"right", labels:{ color:"#374151", font:{size:11}, padding:12, boxWidth:10 } },
+        tooltip: { backgroundColor:"#1e293b", titleColor:"#f1f5f9", bodyColor:"#cbd5e1", padding:8 }
       }
     }
   });
 }
-
 function renderCharts() {
   makeBar("cCat", groupBy("Refund Category", 12), true);
   makeBar("cCourse", groupBy("Course", 10), false);
@@ -491,10 +498,7 @@ function renderFlexipay() {
         '<div style="font-size:26px;font-weight:700;color:#dc2626;margin-top:4px">' + overCount + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Refunded &gt; installment paid</div></div>' +
       '</div>' +
-      '<div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e">' +
-        '<strong>Note:</strong> Amount Credited = single monthly installment (not full program price). ' +
-        'In over-refunded cases, full program refund was approved despite partial payment — EMI provider must write off remaining balance.' +
-      '</div>';
+'';
   }
 }
 
@@ -575,20 +579,20 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 </div>
 
 <!-- CHARTS PANEL -->
-<div id="panel-charts" class="panel" style="gap:8px">
-  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="55" style="max-height:55px"></canvas></div>
+<div id="panel-charts" class="panel" style="gap:14px">
+  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="110"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="85" style="max-height:85px"></canvas></div>
-    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="85" style="max-height:85px"></canvas></div>
+    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="160"></canvas></div>
+    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="160"></canvas></div>
   </div>
-  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="50" style="max-height:50px"></canvas></div>
+  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="100"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="65" style="max-height:65px"></canvas></div>
-    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="65" style="max-height:65px"></canvas></div>
+    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="120"></canvas></div>
+    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="120"></canvas></div>
   </div>
   <div class="grid2">
-    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="85" style="max-height:85px"></canvas></div>
-    <div class="card"><h3>Region</h3><canvas id="cRegion" height="85" style="max-height:85px"></canvas></div>
+    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="160"></canvas></div>
+    <div class="card"><h3>Region</h3><canvas id="cRegion" height="160"></canvas></div>
   </div>
 </div>
 
@@ -622,40 +626,40 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <!-- INSIGHTS PANEL -->
 <div id="panel-insights" class="panel">
   <div class="grid2">
-    <div class="card" style="border-color:#fc8181">
-      <h3 style="color:#f87171">🔴 PA Mis-sell Cases</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">PAs incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
+    <div class="card" style="border-left:3px solid #dc2626">
+      <h3 style="color:#dc2626;font-size:13px">PA Mis-sell — 11 Cases</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Program Advisors incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
     </div>
-    <div class="card" style="border-color:#f6ad55">
-      <h3 style="color:#fbbf24">🟡 76% Drop in Trial Window</h3>
+    <div class="card" style="border-left:3px solid #d97706">
+      <h3 style="color:#d97706;font-size:13px">76% Refunds in Trial Window</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Most learners drop before attending even 2 live classes. <strong style="color:#1a202c">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
     </div>
-    <div class="card" style="border-color:#63b3ed">
-      <h3 style="color:#38bdf8">🔵 Flagship ML — Highest Refunds</h3>
+    <div class="card" style="border-left:3px solid #2563eb">
+      <h3 style="color:#2563eb;font-size:13px">Flagship ML — Highest Refund Count</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">27 refunds — highest in absolute count. <strong style="color:#1a202c">Action:</strong> Cross-reference with enrollment numbers. If refund rate is disproportionate, investigate early-class quality and PA expectation-setting.</p>
     </div>
-    <div class="card" style="border-color:#68d391">
-      <h3 style="color:#34d399">🟢 Content / Curriculum — 15 Cases</h3>
+    <div class="card" style="border-left:3px solid #059669">
+      <h3 style="color:#059669;font-size:13px">Content / Curriculum — 15 Cases</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Learners found content too basic or misaligned with FAANG goals. <strong style="color:#1a202c">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
     </div>
-    <div class="card" style="border-color:#1a56db22">
-      <h3 style="color:#1a56db">🟣 Financial Hardship — Top Driver</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">27 cases driven by visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#1a202c">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
+    <div class="card" style="border-left:3px solid #7c3aed">
+      <h3 style="color:#7c3aed;font-size:13px">Financial Hardship — 27 Cases</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#1a202c">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
     </div>
-    <div class="card" style="border-color:#f6ad55">
-      <h3 style="color:#fb923c">🟠 41 Policy Exceptions Approved</h3>
+    <div class="card" style="border-left:3px solid #d97706">
+      <h3 style="color:#d97706;font-size:13px">41 Policy Exceptions Approved</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">41 refunds approved outside normal policy — signals ad-hoc decision making. <strong style="color:#1a202c">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
     </div>
-    <div class="card" style="border-color:#f687b3">
-      <h3 style="color:#e879f9">🔴 8 Learners Unreachable at OB</h3>
+    <div class="card" style="border-left:3px solid #dc2626">
+      <h3 style="color:#dc2626;font-size:13px">8 Learners Unreachable at Onboarding</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">8 learners show "VM - 4 Attempts" — never reached at onboarding. <strong style="color:#1a202c">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
     </div>
-    <div class="card" style="border-color:#4a556822">
-      <h3 style="color:#4a5568">💡 H1B Visa — US Cohort Risk</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason — a macro external risk. <strong style="color:#1a202c">Action:</strong> Communicate deferral flexibility proactively; add geo-specific clauses for US cohorts.</p>
+    <div class="card" style="border-left:3px solid #475569">
+      <h3 style="color:#475569;font-size:13px">H1B Visa — Macro Risk for US Cohorts</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason. <strong style="color:#1a202c">Action:</strong> Communicate deferral flexibility proactively; add geo-specific clauses for US cohorts.</p>
     </div>
   </div>
 </div>
 
 </body>
-</html>
+</html>>
