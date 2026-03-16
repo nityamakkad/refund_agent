@@ -170,11 +170,7 @@ function buildPrompt() {
     "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
     (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
-    "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.
-
-IMPORTANT: When the user asks for a chart, graph, bar chart, pie chart or visual, respond ONLY with this exact JSON (no other text):
-{"chart": true, "type": "bar", "title": "Title Here", "labels": ["A","B"], "values": [10,20]}
-Use type bar for bar charts, doughnut for pie charts. For all other questions respond in plain text.";
+    "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.\n\nIMPORTANT: When asked for any chart or graph, respond ONLY with this format (no other text):\nCHART|type|Title|Label1,Label2,Label3|10,20,30\nwhere type is bar or pie. For all other questions respond in plain text.";
 }
 
 // SEND TO GEMINI
@@ -233,10 +229,26 @@ async function sendMessage(prefill) {
 var inlineChartCount = 0;
 function tryParseChart(text) {
   try {
-    var t = text.trim().replace(/```json|```/g,"").trim();
-    if (t.charAt(0) !== "{") return null;
-    var p = JSON.parse(t);
-    if (p.chart === true && p.labels && p.values) return p;
+    // Handle pipe-delimited format: CHART|type|Title|Label1,Label2|10,20
+    var t = text.trim();
+    if (t.indexOf("CHART|") === 0) {
+      var parts = t.split("|");
+      if (parts.length >= 5) {
+        return {
+          chart: true,
+          type: parts[1].trim() === "pie" ? "doughnut" : "bar",
+          title: parts[2].trim(),
+          labels: parts[3].split(",").map(function(s){ return s.trim(); }),
+          values: parts[4].split(",").map(function(s){ return parseFloat(s.trim())||0; })
+        };
+      }
+    }
+    // Also try JSON format as fallback
+    var j = t.replace(/```json|```/g,"").trim();
+    if (j.charAt(0) === "{") {
+      var p = JSON.parse(j);
+      if (p.chart === true && p.labels && p.values) return p;
+    }
   } catch(e) {}
   return null;
 }
