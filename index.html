@@ -19,7 +19,7 @@
   .stat{background:#ffffff;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
   .panel{display:none;padding:12px 20px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:10px}
   .panel.active{display:flex}
-  .card{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px}
+  .card{background:#ffffff;border:1px solid #e2e8f0;border-radius:10px;padding:10px 14px;box-shadow:0 1px 4px rgba(0,0,0,0.06)}
   .card h3{font-size:12px;color:#1e40af;font-weight:600;margin-bottom:8px}
   .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
   .msg-user{background:linear-gradient(135deg,#1e40af,#1e429f);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
@@ -381,6 +381,8 @@ function makeBar(id, data, horizontal) {
         data: data.map(function(d){ return d[1]; }),
         backgroundColor: "#2563eb",
         hoverBackgroundColor: "#1d4ed8",
+        borderColor: "#1d4ed8",
+        borderWidth: 1,
         borderRadius: 4,
         borderSkipped: false
       }]
@@ -403,9 +405,10 @@ function makePie(id, data) {
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       cutout: "60%",
       plugins: {
-        legend: { position:"right", labels:{ color:"#374151", font:{size:11}, padding:12, boxWidth:10 } },
+        legend: { position:"right", labels:{ color:"#374151", font:{size:10}, padding:8, boxWidth:10 } },
         tooltip: { backgroundColor:"#1e293b", titleColor:"#f1f5f9", bodyColor:"#cbd5e1", padding:8 }
       }
     }
@@ -558,7 +561,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <span class="pill" onclick="sendMessage('What is the total amount refunded and credited?')">Total amounts</span>
     <span class="pill" onclick="sendMessage('What actions should we take to reduce refunds?')">Action plan</span>
     <span class="pill" onclick="sendMessage('Break down refunds by BU and program category')">BU breakdown</span>
-    <span class="pill" onclick="sendMessage('Which manager has the most refund cases?')">Analysis</span>
+    
   </div>
   <div id="messages" class="messages">
     <div class="empty">
@@ -582,8 +585,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-charts" class="panel" style="gap:14px">
   <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="75"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="65"></canvas></div>
-    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="65"></canvas></div>
+    <div class="card"><h3>Upfront Payment</h3><div style="height:110px;position:relative"><canvas id="cBU"></canvas></div></div>
+    <div class="card"><h3>Trial Window</h3><div style="height:110px;position:relative"><canvas id="cTrial"></canvas></div></div>
   </div>
   <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="68"></canvas></div>
   <div class="grid2">
@@ -591,8 +594,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="82"></canvas></div>
   </div>
   <div class="grid2">
-    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="65"></canvas></div>
-    <div class="card"><h3>Region</h3><canvas id="cRegion" height="65"></canvas></div>
+    <div class="card"><h3>New vs Alumni</h3><div style="height:110px;position:relative"><canvas id="cAlumni"></canvas></div></div>
+    <div class="card"><h3>Region</h3><div style="height:110px;position:relative"><canvas id="cRegion"></canvas></div></div>
   </div>
 </div>
 
