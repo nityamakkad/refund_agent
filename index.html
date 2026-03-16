@@ -190,7 +190,7 @@ async function sendMessage(prefill) {
     };
 
     // Call our secure Netlify function — API key never exposed in browser
-    var res = await fetch("/.netlify/functions/gemini", {
+    var res = await fetch("/api/gemini", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
