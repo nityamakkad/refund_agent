@@ -52,7 +52,7 @@
 <body>
 
 <script>
-const GEMINI_API_KEY = "AIzaSyARuREl82-WpIN7ko-7P-_oGwY1e_hoHnY";
+// API key is stored securely in Netlify environment variables — never in code
 const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
 const SHEET_GID = "1624835958";
 const SHEET_PUB_ID = "2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c";
@@ -189,9 +189,8 @@ async function sendMessage(prefill) {
       generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
     };
 
-    var apiUrl = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY;
-
-    var res = await fetch(apiUrl, {
+    // Call our secure Netlify function — API key never exposed in browser
+    var res = await fetch("/.netlify/functions/gemini", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
