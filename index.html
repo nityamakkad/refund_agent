@@ -8,42 +8,42 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
   *{margin:0;padding:0;box-sizing:border-box;font-family:'DM Sans',sans-serif}
-  body{background:#0a0a12;color:#e2e8f0;min-height:100vh}
-  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#1e1e3a;border-radius:3px}
-  .header{background:linear-gradient(135deg,#12122a,#1a1040);border-bottom:1px solid #1e1e3a;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
-  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#a855f7);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  body{background:#f0f4f8;color:#1a202c;min-height:100vh}
+  ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#d0d8e4;border-radius:3px}
+  .header{background:linear-gradient(135deg,#12122a,#1a1040);border-bottom:1px solid #cbd5e0;padding:14px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+  .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#1a56db,#1e429f);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
   .tabs{display:flex;gap:6px;flex-wrap:wrap}
-  .tab{padding:7px 15px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:#1a1a2e;color:#64748b}
-  .tab.active{background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff}
-  .stats{display:flex;gap:10px;padding:12px 24px;overflow-x:auto;background:#0d0d1a;border-bottom:1px solid #1e1e3a}
-  .stat{background:#13131f;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
+  .tab{padding:7px 15px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:#e2e8f0;color:#4a5568}
+  .tab.active{background:linear-gradient(135deg,#1a56db,#1e429f);color:#fff}
+  .stats{display:flex;gap:10px;padding:12px 24px;overflow-x:auto;background:#e8edf2;border-bottom:1px solid #cbd5e0}
+  .stat{background:#ffffff;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
   .panel{display:none;padding:16px 24px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:14px}
   .panel.active{display:flex}
-  .card{background:#13131f;border:1px solid #1e1e3a;border-radius:12px;padding:18px 20px}
-  .card h3{font-size:13px;color:#a78bfa;font-weight:600;margin-bottom:12px}
-  .messages{flex:1;overflow-y:auto;background:#0d0d1a;border-radius:12px;padding:16px;border:1px solid #1e1e3a;display:flex;flex-direction:column;gap:10px}
-  .msg-user{background:linear-gradient(135deg,#4338ca,#6d28d9);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
-  .msg-ai{background:#13131f;border:1px solid #1e1e3a;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap;word-break:break-word}
-  .msg-label{font-size:10px;color:#6366f1;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
+  .card{background:#ffffff;border:1px solid #cbd5e0;border-radius:12px;padding:18px 20px}
+  .card h3{font-size:13px;color:#1a56db;font-weight:600;margin-bottom:12px}
+  .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
+  .msg-user{background:linear-gradient(135deg,#1e40af,#1e429f);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
+  .msg-ai{background:#ffffff;border:1px solid #cbd5e0;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap;word-break:break-word}
+  .msg-label{font-size:10px;color:#1a56db;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
   .input-row{display:flex;gap:10px}
-  .chat-input{flex:1;background:#13131f;border:1px solid #2d2d4e;border-radius:10px;padding:11px 16px;color:#e2e8f0;font-size:13px}
-  .chat-input:focus{outline:none;border-color:#6366f1}
-  .send-btn{background:linear-gradient(135deg,#6366f1,#a855f7);border:none;border-radius:10px;padding:11px 20px;color:#fff;cursor:pointer;font-weight:700;font-size:13px}
+  .chat-input{flex:1;background:#ffffff;border:1px solid #cbd5e0;color:#1a202c;border-radius:10px;padding:11px 16px;color:#1a202c;font-size:13px}
+  .chat-input:focus{outline:none;border-color:#1a56db}
+  .send-btn{background:linear-gradient(135deg,#1a56db,#1e429f);border:none;border-radius:10px;padding:11px 20px;color:#fff;cursor:pointer;font-weight:700;font-size:13px}
   .send-btn:disabled{opacity:.5;cursor:not-allowed}
   .pills{display:flex;flex-wrap:wrap;gap:6px}
-  .pill{background:#13131f;border:1px solid #1e1e3a;color:#a78bfa;border-radius:20px;padding:5px 13px;font-size:11px;cursor:pointer;font-weight:500}
-  .pill:hover{background:#1e1e3a}
-  .refresh-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#1a2e1a;color:#34d399}
+  .pill{background:#ffffff;border:1px solid #cbd5e0;color:#1a56db;border-radius:20px;padding:5px 13px;font-size:11px;cursor:pointer;font-weight:500}
+  .pill:hover{background:#d0d8e4}
+  .refresh-btn{padding:7px 14px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;background:#c6f6d5;color:#276749}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   .full{grid-column:1/-1}
   table{width:100%;border-collapse:collapse;font-size:12px}
-  th{padding:11px 14px;text-align:left;color:#a78bfa;font-weight:600;font-size:11px;background:#0d0d1a;border-bottom:2px solid #1e1e3a}
-  td{padding:10px 14px;border-bottom:1px solid #1a1a2e;color:#e2e8f0}
-  tr:nth-child(even) td{background:#0f0f1a}
+  th{padding:11px 14px;text-align:left;color:#1a56db;font-weight:600;font-size:11px;background:#e8edf2;border-bottom:2px solid #cbd5e0}
+  td{padding:10px 14px;border-bottom:1px solid #1a1a2e;color:#1a202c}
+  tr:nth-child(even) td{background:#eef1f5}
   .badge{border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600}
   .dots{display:none;align-items:center;gap:6px;padding:4px 8px}
-  .dot{width:7px;height:7px;border-radius:50%;background:#6366f1}
-  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;color:#334155}
+  .dot{width:7px;height:7px;border-radius:50%;background:#1a56db}
+  .empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;color:#a0aec0}
   .toast{position:fixed;bottom:20px;right:20px;padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .3s}
   @keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.4;transform:scale(.8)}}
   @media(max-width:600px){.grid2{grid-template-columns:1fr}.full{grid-column:1}.header{flex-direction:column;align-items:flex-start}}
@@ -222,7 +222,7 @@ function renderMessages() {
   var box = document.getElementById("messages");
   if (!box) return;
   if (messages.length === 0) {
-    box.innerHTML = '<div class="empty"><div style="font-size:52px;margin-bottom:12px">🤖</div><p style="font-size:15px;color:#475569;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p></div>';
+    box.innerHTML = '<div class="empty"><div style="font-size:52px;margin-bottom:12px">🤖</div><p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p></div>';
     return;
   }
   box.innerHTML = messages.map(function(m) {
@@ -255,7 +255,7 @@ function updateStats() {
   var ai = sheetData.filter(function(r){ return get(r,"BU") === "AI"; }).length;
 
   var stats = [
-    {l:"Total Refunds", v:total, c:"#818cf8", i:"↩"},
+    {l:"Total Refunds", v:total, c:"#1a56db", i:"↩"},
     {l:"Total Refunded", v:"$"+Math.round(refunded/1000)+"K", c:"#f87171", i:"💸"},
     {l:"In Trial Window", v:Math.round(inTrial/total*100)+"%", c:"#34d399", i:"⏱"},
     {l:"Flexipay Learners", v:flex, c:"#fbbf24", i:"💳"},
@@ -269,22 +269,22 @@ function updateStats() {
     return '<div class="stat" style="border:1px solid ' + x.c + '22">' +
       '<div style="font-size:16px">' + x.i + '</div>' +
       '<div style="font-size:20px;font-weight:700;color:' + x.c + '">' + x.v + '</div>' +
-      '<div style="font-size:10px;color:#475569;margin-top:2px">' + x.l + '</div>' +
+      '<div style="font-size:10px;color:#718096;margin-top:2px">' + x.l + '</div>' +
       '</div>';
   }).join("");
 }
 
 // CHARTS
-var COLORS = ["#818cf8","#fb923c","#34d399","#f87171","#38bdf8","#a78bfa","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
+var COLORS = ["#1a56db","#fb923c","#34d399","#f87171","#38bdf8","#1a56db","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
 var TOPTS = {
   responsive: true,
   plugins: {
     legend: { display: false },
-    tooltip: { backgroundColor:"#1e1e3a", titleColor:"#a78bfa", bodyColor:"#e2e8f0" }
+    tooltip: { backgroundColor:"#e2e8f0", titleColor:"#1a56db", bodyColor:"#e2e8f0" }
   },
   scales: {
-    x: { ticks:{ color:"#64748b", font:{size:11} }, grid:{ color:"#1e1e3a" } },
-    y: { ticks:{ color:"#64748b", font:{size:11} }, grid:{ color:"#1e1e3a" } }
+    x: { ticks:{ color:"#64748b", font:{size:11} }, grid:{ color:"#e2e8f0" } },
+    y: { ticks:{ color:"#64748b", font:{size:11} }, grid:{ color:"#e2e8f0" } }
   }
 };
 
@@ -318,7 +318,7 @@ function makePie(id, data) {
       responsive: true,
       plugins: {
         legend: { position:"bottom", labels:{ color:"#94a3b8", font:{size:11} } },
-        tooltip: { backgroundColor:"#1e1e3a", titleColor:"#a78bfa", bodyColor:"#e2e8f0" }
+        tooltip: { backgroundColor:"#e2e8f0", titleColor:"#1a56db", bodyColor:"#e2e8f0" }
       }
     }
   });
@@ -353,19 +353,19 @@ function renderFlexipay() {
     var flag = rf > c
       ? '<span class="badge" style="background:#f8717122;color:#f87171">⚠ OVER</span>'
       : rf === 0
-      ? '<span class="badge" style="background:#47556922;color:#94a3b8">NO REFUND</span>'
+      ? '<span class="badge" style="background:#47556922;color:#4a5568">NO REFUND</span>'
       : rf < c
       ? '<span class="badge" style="background:#fbbf2422;color:#fbbf24">PARTIAL</span>'
       : '<span class="badge" style="background:#34d39922;color:#34d399">FULL</span>';
     return "<tr>" +
-      "<td style='color:#475569'>" + (i+1) + "</td>" +
+      "<td style='color:#718096'>" + (i+1) + "</td>" +
       "<td style='font-weight:500'>" + name + "</td>" +
-      "<td style='color:#94a3b8'>" + (get(r,"Course")||"—") + "</td>" +
+      "<td style='color:#4a5568'>" + (get(r,"Course")||"—") + "</td>" +
       "<td style='color:#34d399;font-weight:600'>$" + c.toLocaleString() + "</td>" +
       "<td style='color:" + (rf>c?"#f87171":rf===0?"#475569":"#fbbf24") + ";font-weight:700'>" + (rf===0?"—":"$"+rf.toLocaleString()) + "</td>" +
       "<td style='color:" + (d>0?"#f87171":d<0?"#34d399":"#94a3b8") + ";font-weight:700'>" + (d===0?"±0":d>0?"+$"+d.toLocaleString():"-$"+Math.abs(d).toLocaleString()) + "</td>" +
-      "<td style='color:#94a3b8'>" + (get(r,"Refund period Bucket")||"—") + "</td>" +
-      "<td><span style='background:#1e1e3a;border-radius:6px;padding:3px 8px;font-size:10px;color:#94a3b8'>" + (get(r,"Refund Category")||"—") + "</span></td>" +
+      "<td style='color:#4a5568'>" + (get(r,"Refund period Bucket")||"—") + "</td>" +
+      "<td><span style='background:#d0d8e4;border-radius:6px;padding:3px 8px;font-size:10px;color:#4a5568'>" + (get(r,"Refund Category")||"—") + "</span></td>" +
       "<td>" + flag + "</td>" +
       "</tr>";
   }).join("");
@@ -374,10 +374,10 @@ function renderFlexipay() {
   if (summary) {
     summary.innerHTML =
       '<div style="display:flex;gap:24px;flex-wrap:wrap;margin-bottom:16px">' +
-      '<div><div style="font-size:10px;color:#475569">Learners</div><div style="font-size:22px;font-weight:700;color:#a78bfa">' + flex.length + '</div></div>' +
-      '<div><div style="font-size:10px;color:#475569">Total Credited</div><div style="font-size:22px;font-weight:700;color:#34d399">$' + tc.toLocaleString() + '</div></div>' +
-      '<div><div style="font-size:10px;color:#475569">Total Refunded</div><div style="font-size:22px;font-weight:700;color:#f87171">$' + tr.toLocaleString() + '</div></div>' +
-      '<div><div style="font-size:10px;color:#475569">Net Δ</div><div style="font-size:22px;font-weight:700;color:' + (tr>tc?"#f87171":"#34d399") + '">' + (tr>tc?"+":"") + "$" + (tr-tc).toLocaleString() + '</div></div>' +
+      '<div><div style="font-size:10px;color:#718096">Learners</div><div style="font-size:22px;font-weight:700;color:#1a56db">' + flex.length + '</div></div>' +
+      '<div><div style="font-size:10px;color:#718096">Total Credited</div><div style="font-size:22px;font-weight:700;color:#34d399">$' + tc.toLocaleString() + '</div></div>' +
+      '<div><div style="font-size:10px;color:#718096">Total Refunded</div><div style="font-size:22px;font-weight:700;color:#f87171">$' + tr.toLocaleString() + '</div></div>' +
+      '<div><div style="font-size:10px;color:#718096">Net Δ</div><div style="font-size:22px;font-weight:700;color:' + (tr>tc?"#f87171":"#34d399") + '">' + (tr>tc?"+":"") + "$" + (tr-tc).toLocaleString() + '</div></div>' +
       '</div>';
   }
 }
@@ -392,7 +392,7 @@ function switchTab(t) {
 function showToast(msg, err) {
   var t = document.createElement("div");
   t.className = "toast";
-  t.style.background = err ? "#f87171" : "#6366f1";
+  t.style.background = err ? "#f87171" : "#1a56db";
   t.style.color = "#fff";
   t.textContent = msg;
   document.body.appendChild(t);
@@ -407,8 +407,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   <div style="display:flex;align-items:center;gap:10px">
     <div class="logo">📊</div>
     <div>
-      <h1 style="font-size:18px;font-weight:700;color:#c4b5fd">Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#475569">Live from Google Sheets · EdTech Refund Analytics</p>
+      <h1 style="font-size:18px;font-weight:700;color:#ffffff">Refund Intelligence Agent</h1>
+      <p style="font-size:11px;color:#718096">Live from Google Sheets · EdTech Refund Analytics</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -423,7 +423,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 </div>
 
 <!-- STAT BAR -->
-<div id="statsBar" class="stats"></div>
+<div id="statsBar" class="stats" style="background:#e8edf2"></div>
 
 <!-- CHAT PANEL -->
 <div id="panel-chat" class="panel active">
@@ -442,14 +442,14 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   <div id="messages" class="messages">
     <div class="empty">
       <div style="font-size:52px;margin-bottom:12px">🤖</div>
-      <p style="font-size:15px;color:#475569;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p>
+      <p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p>
     </div>
   </div>
   <div id="loadingDots" class="dots">
     <div class="dot" style="animation:pulse 1.2s ease-in-out 0.0s infinite"></div>
     <div class="dot" style="animation:pulse 1.2s ease-in-out 0.2s infinite"></div>
     <div class="dot" style="animation:pulse 1.2s ease-in-out 0.4s infinite"></div>
-    <span style="font-size:11px;color:#475569;margin-left:4px">Analysing…</span>
+    <span style="font-size:11px;color:#718096;margin-left:4px">Analysing…</span>
   </div>
   <div class="input-row">
     <input id="chatInput" class="chat-input" placeholder="Ask anything about your refund data…" onkeydown="if(event.key==='Enter')sendMessage()"/>
@@ -473,12 +473,12 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 
 <!-- FLEXIPAY PANEL -->
 <div id="panel-flexipay" class="panel">
-  <div class="card" style="border-color:#fbbf2422">
+  <div class="card" style="border-color:#f6ad55">
     <h3 style="color:#fbbf24;font-size:15px">💳 Flexipay — How It Works</h3>
-    <p style="font-size:13px;color:#94a3b8;line-height:1.7;margin-bottom:14px">Flexipay learners pay in monthly installments (~$1,000/month) under a 0% APR plan. <strong style="color:#e2e8f0">Amount Credited = one installment only</strong>, not the full program price. When refunded &gt; credited, the EMI provider must write off the remaining balance.</p>
+    <p style="font-size:13px;color:#4a5568;line-height:1.7;margin-bottom:14px">Flexipay learners pay in monthly installments (~$1,000/month) under a 0% APR plan. <strong style="color:#1a202c">Amount Credited = one installment only</strong>, not the full program price. When refunded &gt; credited, the EMI provider must write off the remaining balance.</p>
     <div id="flexSummary"></div>
   </div>
-  <div style="overflow-x:auto;border-radius:12px;border:1px solid #1e1e3a">
+  <div style="overflow-x:auto;border-radius:12px;border:1px solid #cbd5e0">
     <table>
       <thead>
         <tr>
@@ -489,46 +489,46 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
       <tbody id="flexBody"></tbody>
     </table>
   </div>
-  <div class="card" style="border-color:#f8717133">
+  <div class="card" style="border-color:#fc8181">
     <p style="font-size:13px;color:#f87171;font-weight:700;margin-bottom:6px">⚠️ Finance Alert</p>
-    <p style="font-size:12px;color:#94a3b8;line-height:1.7">Cases where refunded &gt; credited mean the full program refund was approved even though only one installment was collected. Confirm write-off confirmation is received from the EMI provider for each flagged case.</p>
+    <p style="font-size:12px;color:#4a5568;line-height:1.7">Cases where refunded &gt; credited mean the full program refund was approved even though only one installment was collected. Confirm write-off confirmation is received from the EMI provider for each flagged case.</p>
   </div>
 </div>
 
 <!-- INSIGHTS PANEL -->
 <div id="panel-insights" class="panel">
   <div class="grid2">
-    <div class="card" style="border-color:#f8717122">
+    <div class="card" style="border-color:#fc8181">
       <h3 style="color:#f87171">🔴 PA Mis-sell Cases</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">PAs incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#e2e8f0">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">PAs incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
     </div>
-    <div class="card" style="border-color:#fbbf2422">
+    <div class="card" style="border-color:#f6ad55">
       <h3 style="color:#fbbf24">🟡 76% Drop in Trial Window</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">Most learners drop before attending even 2 live classes. <strong style="color:#e2e8f0">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Most learners drop before attending even 2 live classes. <strong style="color:#1a202c">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
     </div>
-    <div class="card" style="border-color:#38bdf822">
+    <div class="card" style="border-color:#63b3ed">
       <h3 style="color:#38bdf8">🔵 Flagship ML — Highest Refunds</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">27 refunds — highest in absolute count. <strong style="color:#e2e8f0">Action:</strong> Cross-reference with enrollment numbers. If refund rate is disproportionate, investigate early-class quality and PA expectation-setting.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">27 refunds — highest in absolute count. <strong style="color:#1a202c">Action:</strong> Cross-reference with enrollment numbers. If refund rate is disproportionate, investigate early-class quality and PA expectation-setting.</p>
     </div>
-    <div class="card" style="border-color:#34d39922">
+    <div class="card" style="border-color:#68d391">
       <h3 style="color:#34d399">🟢 Content / Curriculum — 15 Cases</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">Learners found content too basic or misaligned with FAANG goals. <strong style="color:#e2e8f0">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Learners found content too basic or misaligned with FAANG goals. <strong style="color:#1a202c">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
     </div>
-    <div class="card" style="border-color:#a78bfa22">
-      <h3 style="color:#a78bfa">🟣 Financial Hardship — Top Driver</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">27 cases driven by visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#e2e8f0">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
+    <div class="card" style="border-color:#1a56db22">
+      <h3 style="color:#1a56db">🟣 Financial Hardship — Top Driver</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">27 cases driven by visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#1a202c">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
     </div>
-    <div class="card" style="border-color:#fb923c22">
+    <div class="card" style="border-color:#f6ad55">
       <h3 style="color:#fb923c">🟠 41 Policy Exceptions Approved</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">41 refunds approved outside normal policy — signals ad-hoc decision making. <strong style="color:#e2e8f0">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">41 refunds approved outside normal policy — signals ad-hoc decision making. <strong style="color:#1a202c">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
     </div>
-    <div class="card" style="border-color:#e879f922">
+    <div class="card" style="border-color:#f687b3">
       <h3 style="color:#e879f9">🔴 8 Learners Unreachable at OB</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">8 learners show "VM - 4 Attempts" — never reached at onboarding. <strong style="color:#e2e8f0">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">8 learners show "VM - 4 Attempts" — never reached at onboarding. <strong style="color:#1a202c">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
     </div>
-    <div class="card" style="border-color:#94a3b822">
-      <h3 style="color:#94a3b8">💡 H1B Visa — US Cohort Risk</h3>
-      <p style="font-size:12px;color:#94a3b8;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason — a macro external risk. <strong style="color:#e2e8f0">Action:</strong> Communicate deferral flexibility proactively; add geo-specific clauses for US cohorts.</p>
+    <div class="card" style="border-color:#4a556822">
+      <h3 style="color:#4a5568">💡 H1B Visa — US Cohort Risk</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason — a macro external risk. <strong style="color:#1a202c">Action:</strong> Communicate deferral flexibility proactively; add geo-specific clauses for US cohorts.</p>
     </div>
   </div>
 </div>
