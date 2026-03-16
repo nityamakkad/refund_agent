@@ -204,7 +204,7 @@ async function sendMessage(prefill) {
     };
 
     // Call our secure Netlify function — API key never exposed in browser
-    var res = await fetch("/api/gemini", {
+    var res = await fetch("/api/groq", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
@@ -283,7 +283,7 @@ function renderMessages() {
       return '<div class="msg-ai"><div class="msg-label">AI ANALYST — CHART</div>' +
         '<p style="font-weight:600;color:#1a202c;font-size:13px;margin-bottom:8px">' + (chartData.title||"Chart") + '</p>' +
         '<div style="background:#f7fafc;border-radius:8px;padding:10px">' +
-        '<canvas id="' + cid + '" height="140"></canvas></div></div>';
+        '<canvas id="' + cid + '" height="95"></canvas></div></div>';
     }
     var safe2 = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
     return '<div class="msg-ai"><div class="msg-label">AI ANALYST</div>' + safe2 + '</div>';
@@ -580,19 +580,19 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 
 <!-- CHARTS PANEL -->
 <div id="panel-charts" class="panel" style="gap:14px">
-  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="110"></canvas></div>
+  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><canvas id="cCat" height="75"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="160"></canvas></div>
-    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="160"></canvas></div>
+    <div class="card"><h3>Upfront Payment</h3><canvas id="cBU" height="109"></canvas></div>
+    <div class="card"><h3>Trial Window</h3><canvas id="cTrial" height="109"></canvas></div>
   </div>
-  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="100"></canvas></div>
+  <div class="card full"><h3>Top Courses by Refund Count</h3><canvas id="cCourse" height="68"></canvas></div>
   <div class="grid2">
-    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="120"></canvas></div>
-    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="120"></canvas></div>
+    <div class="card"><h3>Payment Modes</h3><canvas id="cPay" height="82"></canvas></div>
+    <div class="card"><h3>Program Categories</h3><canvas id="cPcat" height="82"></canvas></div>
   </div>
   <div class="grid2">
-    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="160"></canvas></div>
-    <div class="card"><h3>Region</h3><canvas id="cRegion" height="160"></canvas></div>
+    <div class="card"><h3>New vs Alumni</h3><canvas id="cAlumni" height="109"></canvas></div>
+    <div class="card"><h3>Region</h3><canvas id="cRegion" height="109"></canvas></div>
   </div>
 </div>
 
@@ -662,4 +662,4 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 </div>
 
 </body>
-</html>>
+</html>
