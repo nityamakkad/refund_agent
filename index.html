@@ -138,7 +138,7 @@ function buildPrompt() {
     return "  • " + name + " | Credited: $" + get(r,"Amount Credited") + " | Refunded: $" + get(r,"Amount refunded") + " | Window: " + get(r,"Refund period Bucket") + " | Category: " + get(r,"Refund Category") + " | Course: " + get(r,"Course");
   }).join("\n");
 
-  var sampleRecords = sheetData.slice(0,60).map(function(r) {
+  var sampleRecords = sheetData.slice(0,30).map(function(r) {
     var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + get(r,"Hubspot id");
     return name + " | " + get(r,"Course") + " | $" + get(r,"Amount refunded") + " | " + get(r,"Refund Category") + " | " + get(r,"BU") + " | PA:" + get(r,"PA") + " | Manager:" + get(r,"Manager");
   }).join("\n");
@@ -167,16 +167,20 @@ function buildPrompt() {
     "FLEXIPAY LEARNERS (" + flex.length + " total — pay in monthly installments, Amount Credited = one installment only):\n" + flexDetails + "\n\n" +
     "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
-    (sheetData.length > 60 ? "...and " + (sheetData.length - 60) + " more records\n" : "") +
+    (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
     "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.";
 }
 
 // SEND TO GEMINI
+var isBusy = false;
 async function sendMessage(prefill) {
+  if (isBusy) return;
   var input = document.getElementById("chatInput");
   var text = prefill || input.value.trim();
   if (!text) return;
   input.value = "";
+  isBusy = true;
+  document.querySelectorAll(".pill").forEach(function(p){ p.style.pointerEvents="none"; p.style.opacity="0.5"; });
 
   messages.push({ role: "user", parts: [{ text: text }] });
   renderMessages();
@@ -186,7 +190,7 @@ async function sendMessage(prefill) {
     var requestBody = {
       system_instruction: { parts: [{ text: buildPrompt() }] },
       contents: messages,
-      generationConfig: { temperature: 0.7, maxOutputTokens: 1024 }
+      generationConfig: { temperature: 0.5, maxOutputTokens: 800 }
     };
 
     // Call our secure Netlify function — API key never exposed in browser
@@ -214,6 +218,8 @@ async function sendMessage(prefill) {
   }
 
   setLoading(false);
+  isBusy = false;
+  document.querySelectorAll(".pill").forEach(function(p){ p.style.pointerEvents="auto"; p.style.opacity="1"; });
   renderMessages();
 }
 
