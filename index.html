@@ -53,9 +53,9 @@
 
 <script>
 const GEMINI_API_KEY = "AIzaSyDDBOVFD046SNALNJsyTDarOhwVG9ac3w0";
-const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTD8DeRvlK3VoVykupfwZtBhAhKujWijjmp_IfwaTBNQt1Q-ylrCh5iLSLZAOM7xLqS81N5bm-uMnz6/pub?gid=1624835958&single=true&output=csv";
+const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
 const SHEET_GID = "1624835958";
-const SHEET_PUB_ID = "2PACX-1vTD8DeRvlK3VoVykupfwZtBhAhKujWijjmp_IfwaTBNQt1Q-ylrCh5iLSLZAOM7xLqS81N5bm-uMnz6";
+const SHEET_PUB_ID = "2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c";
 
 let sheetData = [];
 let messages  = [];
@@ -88,35 +88,20 @@ function splitCSVLine(line) {
 async function fetchSheet() {
   var btn = document.getElementById("refreshBtn");
   if (btn) btn.textContent = "⏳ Loading…";
-  // Try multiple methods in sequence
-  var urls = [
-    "https://docs.google.com/spreadsheets/d/e/" + SHEET_PUB_ID + "/gviz/tq?tqx=out:csv&gid=" + SHEET_GID,
-    SHEET_CSV_URL,
-    "https://thingproxy.freeboard.io/fetch/" + SHEET_CSV_URL,
-    "https://yacdn.org/proxy/" + SHEET_CSV_URL
-  ];
-  var loaded = false;
-  for (var i = 0; i < urls.length; i++) {
-    try {
-      console.log("Trying URL:", urls[i]);
-      var res = await fetch(urls[i]);
-      if (!res.ok) throw new Error("HTTP " + res.status);
-      var text = await res.text();
-      if (!text || text.length < 10) throw new Error("Empty response");
-      sheetData = parseCSV(text);
-      if (sheetData.length === 0) throw new Error("No rows parsed");
-      updateStats();
-      renderCharts();
-      renderFlexipay();
-      showToast("✅ Sheet loaded — " + sheetData.length + " records", false);
-      loaded = true;
-      break;
-    } catch(e) {
-      console.warn("URL " + i + " failed:", e.message);
-    }
-  }
-  if (!loaded) {
-    showToast("❌ Could not load sheet — check console", true);
+  try {
+    var res = await fetch(SHEET_CSV_URL);
+    if (!res.ok) throw new Error("HTTP status " + res.status);
+    var text = await res.text();
+    if (!text || text.length < 10) throw new Error("Empty response");
+    sheetData = parseCSV(text);
+    if (sheetData.length === 0) throw new Error("No data rows found");
+    updateStats();
+    renderCharts();
+    renderFlexipay();
+    showToast("✅ Sheet loaded — " + sheetData.length + " records", false);
+  } catch(e) {
+    console.error("Sheet error:", e);
+    showToast("❌ Could not load sheet: " + e.message, true);
   }
   if (btn) btn.textContent = "🔄 Refresh Data";
 }
