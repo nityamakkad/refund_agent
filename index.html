@@ -62,19 +62,18 @@ let sheetData = [];
 let messages  = [];
 let charts    = {};
 
-// CSV PARSER
+// CSV PARSER - handles multi-line quoted fields correctly
 function parseCSV(text) {
-  // Step 1: rejoin lines that are inside quoted fields (multi-line cells)
-  var cleaned = "";
+  // Rejoin newlines inside quoted cells before splitting
+  var cleaned = [];
   var inQ = false;
   for (var i = 0; i < text.length; i++) {
     var ch = text[i];
-    if (ch === '"') { inQ = !inQ; cleaned += ch; }
-    else if (ch === "\n" && inQ) { cleaned += " "; }  // replace newline inside quotes with space
-    else { cleaned += ch; }
+    if (ch === '"') { inQ = !inQ; cleaned.push(ch); }
+    else if ((ch === '\n' || ch === '\r') && inQ) { cleaned.push(' '); }
+    else { cleaned.push(ch); }
   }
-  // Step 2: now safely split by newline
-  var lines = cleaned.split("\n");
+  var lines = cleaned.join('').split('\n');
   var headers = splitCSVLine(lines[0]);
   var rows = [];
   for (var j = 1; j < lines.length; j++) {
@@ -82,9 +81,8 @@ function parseCSV(text) {
     if (!line) continue;
     var vals = splitCSVLine(line);
     var obj = {};
-    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
-    // Only keep real learner rows - Invoice No. always starts with IKUS
-    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
+    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
+    if ((obj['Invoice No.'] || '').indexOf('IKUS') === 0) rows.push(obj);
   }
   return rows;
 }
@@ -123,33 +121,17 @@ function countVal(field, val) {
   return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
 }
 
-// TSV PARSER
-function parseTSV(text) {
-  var lines = text.split("\n");
-  var headers = lines[0].split("\t").map(function(h){ return h.trim(); });
-  var rows = [];
-  for (var i = 1; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-    var vals = line.split("\t");
-    var obj = {};
-    headers.forEach(function(h, k){ obj[h] = (vals[k] || "").trim(); });
-    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
-  }
-  return rows;
-}
-
 // FETCH SHEET
 async function fetchSheet() {
   var btn = document.getElementById("refreshBtn");
-  if (btn) btn.textContent = "\u23F3 Loading...";
+  if (btn) btn.textContent = "Loading...";
   try {
-    var tsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv&t=" + Date.now();
-    var res = await fetch(tsvUrl);
+    var url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv&t=" + Date.now();
+    var res = await fetch(url);
     if (!res.ok) throw new Error("HTTP " + res.status);
     var text = await res.text();
     if (!text || text.length < 10) throw new Error("Empty response");
-    sheetData = parseTSV(text);
+    sheetData = parseCSV(text);
     if (sheetData.length === 0) throw new Error("No valid rows found");
     updateStats();
     renderCharts();
@@ -157,14 +139,19 @@ async function fetchSheet() {
     showToast("Sheet loaded - " + sheetData.length + " records", false);
   } catch(e) {
     console.error("Sheet error:", e);
-    showToast("Could not load sheet: " + e.message, true);
+    showToast("Could not load: " + e.message, true);
   }
-  if (btn) btn.textContent = "\uD83D\uDD04 Refresh Data";
+  if (btn) btn.textContent = "Refresh Data";
 }
 
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
-  var total = sheetData.length;
+  // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
+  var total = sheetData.filter(function(r){
+    var name = get(r,"Name");
+    var hub = get(r,"Hubspot id");
+    return (name.length > 1) || (hub.length > 3);
+  }).length;
   var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
   var credited = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount Credited")); }, 0);
 
@@ -357,7 +344,12 @@ function setLoading(on) {
 
 // STAT CARDS
 function updateStats() {
-  var total = sheetData.length;
+  // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
+  var total = sheetData.filter(function(r){
+    var name = get(r,"Name");
+    var hub = get(r,"Hubspot id");
+    return (name.length > 1) || (hub.length > 3);
+  }).length;
   var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
   var inTrial = countVal("Refund request received in Trial Window","yes");
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
@@ -415,7 +407,21 @@ function makeBar(id, data, horizontal) {
         borderSkipped: false
       }]
     },
-    options: Object.assign({}, TOPTS, { indexAxis: horizontal ? "y" : "x", maintainAspectRatio: false })
+    options: Object.assign({}, TOPTS, {
+      indexAxis: horizontal ? "y" : "x",
+      maintainAspectRatio: false,
+      plugins: Object.assign({}, TOPTS.plugins, {
+        tooltip: {
+          callbacks: {
+            label: function(ctx) { return " " + ctx.parsed[horizontal ? "x" : "y"]; }
+          },
+          backgroundColor: "#1e293b",
+          titleColor: "#f1f5f9",
+          bodyColor: "#cbd5e1",
+          padding: 8
+        }
+      })
+    })
   });
 }
 
