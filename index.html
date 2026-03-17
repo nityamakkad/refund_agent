@@ -63,24 +63,30 @@ let charts    = {};
 
 // CSV PARSER
 function parseCSV(text) {
-  var lines = text.split("\n");
+  // Step 1: rejoin lines that are inside quoted fields (multi-line cells)
+  var cleaned = "";
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') { inQ = !inQ; cleaned += ch; }
+    else if (ch === "\n" && inQ) { cleaned += " "; }  // replace newline inside quotes with space
+    else { cleaned += ch; }
+  }
+  // Step 2: now safely split by newline
+  var lines = cleaned.split("\n");
   var headers = splitCSVLine(lines[0]);
   var rows = [];
-  for (var i = 1; i < lines.length; i++) {
-    var line = lines[i].trim();
+  for (var j = 1; j < lines.length; j++) {
+    var line = lines[j].trim();
     if (!line) continue;
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
-    // Only count rows with a valid Invoice No. (starts with IKUS) — most reliable identifier
-    var invoice = obj["Invoice No."] || "";
-    if (invoice.indexOf("IKUS") === 0) rows.push(obj);
+    // Only keep real learner rows - Invoice No. always starts with IKUS
+    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
   }
   return rows;
-}function countVal(field, val) {
-  return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
 }
-
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
   var total = sheetData.length;
