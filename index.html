@@ -63,76 +63,21 @@ let charts    = {};
 
 // CSV PARSER
 function parseCSV(text) {
-  // Properly parse CSV handling multi-line quoted fields
+  var lines = text.split("\n");
+  var headers = splitCSVLine(lines[0]);
   var rows = [];
-  var headers = null;
-  var i = 0;
-  
-  function parseRow(str, pos) {
-    var fields = [];
-    var field = "";
-    var inQ = false;
-    while (pos < str.length) {
-      var ch = str[pos];
-      if (inQ) {
-        if (ch === '"' && str[pos+1] === '"') { field += '"'; pos += 2; }
-        else if (ch === '"') { inQ = false; pos++; }
-        else { field += ch; pos++; }
-      } else {
-        if (ch === '"') { inQ = true; pos++; }
-        else if (ch === ',') { fields.push(field.trim()); field = ""; pos++; }
-        else if (ch === '\r' && str[pos+1] === '\n' && !inQ) { pos += 2; break; }
-        else if ((ch === '\n' || ch === '\r') && !inQ) { pos++; break; }
-        else { field += ch; pos++; }
-      }
-    }
-    fields.push(field.trim());
-    return { fields: fields, pos: pos };
-  }
-  
-  var pos = 0;
-  var result = parseRow(text, pos);
-  headers = result.fields;
-  pos = result.pos;
-  
-  while (pos < text.length) {
-    result = parseRow(text, pos);
-    if (result.pos === pos) break;
-    pos = result.pos;
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = splitCSVLine(line);
     var obj = {};
-    headers.forEach(function(h, i) { obj[h.trim()] = (result.fields[i] || "").trim(); });
-    // Only include valid refund rows - must have a refund date and an identifier
-    // Valid row = must have a Name OR Hubspot id (learner identifier)
-    var hasName = obj["Name"] && obj["Name"].length > 1 && !obj["Name"].startsWith("v1:");
-    var hasHubspot = obj["Hubspot id"] && obj["Hubspot id"].length > 3;
-    var hasEmail = obj["Email id"] && obj["Email id"].indexOf("@") !== -1;
-    if (hasName || hasHubspot || hasEmail) rows.push(obj);
+    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
+    // Only count rows with a valid Invoice No. (starts with IKUS) — most reliable identifier
+    var invoice = obj["Invoice No."] || "";
+    if (invoice.indexOf("IKUS") === 0) rows.push(obj);
   }
   return rows;
-}
-// HELPERS
-function get(r, k) { return (r[k] || "").trim(); }
-function parseAmt(s) { return parseFloat((s||"").replace(/,/g,"")) || 0; }
-function groupBy(field, limit) {
-  limit = limit || 12;
-  var c = {};
-  sheetData.forEach(function(r) {
-    var v = (r[field] || "").trim();
-    // Skip empty, URLs, long strings, values with spaces that look like names (for payment mode)
-    if (!v || v.length > 40 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
-    c[v] = (c[v] || 0) + 1;
-  });
-  // Remove outliers — only keep values that appear more than once OR are top results
-  var entries = Object.entries(c).sort(function(a,b){ return b[1]-a[1]; });
-  // Filter out values with count of 1 that look like names (contain spaces and mixed case)
-  entries = entries.filter(function(e){
-    if (e[1] >= 2) return true;
-    // Allow single-count if it looks like a valid category (all caps, underscores, numbers)
-    return /^[A-Z0-9%_ ]+$/.test(e[0]);
-  });
-  return entries.slice(0, limit);
-}
-function countVal(field, val) {
+}function countVal(field, val) {
   return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
 }
 
