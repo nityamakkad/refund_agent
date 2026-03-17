@@ -70,9 +70,11 @@ function parseCSV(text) {
     var obj = {};
     headers.forEach(function(h, i) { obj[h.trim()] = (vals[i] || "").trim(); });
     return obj;
+  }).filter(function(row) {
+    // Filter out empty/blank rows — only keep rows with key fields populated
+    return (row["Email id"] || row["Hubspot id"] || row["Name"] || row["Amount refunded"]);
   });
-}
-function splitCSVLine(line) {
+}function splitCSVLine(line) {
   var result = [], cur = "", inQ = false;
   for (var i = 0; i < line.length; i++) {
     var ch = line[i];
@@ -332,15 +334,13 @@ function updateStats() {
   var inTrial = countVal("Refund request received in Trial Window","yes");
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
   var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
-  var ai = sheetData.filter(function(r){ return get(r,"BU") === "AI"; }).length;
 
   var stats = [
     {l:"Total Refunds", v:total, c:"#1a56db", i:"↩"},
     {l:"Total Refunded", v:"$"+Math.round(refunded/1000)+"K", c:"#f87171", i:"💸"},
     {l:"In Trial Window", v:Math.round(inTrial/total*100)+"%", c:"#34d399", i:"⏱"},
     {l:"Flexipay Learners", v:flex, c:"#fbbf24", i:"💳"},
-    {l:"PA Mis-sell", v:paMissell, c:"#e879f9", i:"⚠️"},
-    {l:"AI BU Refunds", v:ai, c:"#38bdf8", i:"🤖"}
+    {l:"PA Mis-sell", v:paMissell, c:"#e879f9", i:"⚠️"}
   ];
 
   var bar = document.getElementById("statsBar");
