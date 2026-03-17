@@ -63,51 +63,53 @@ let charts    = {};
 
 // CSV PARSER
 function parseCSV(text) {
-  const lines = text.trim().split("\n");
-  const headers = splitCSVLine(lines[0]);
-  return lines.slice(1).map(function(line) {
-    var vals = splitCSVLine(line);
+  // Properly parse CSV handling multi-line quoted fields
+  var rows = [];
+  var headers = null;
+  var i = 0;
+  
+  function parseRow(str, pos) {
+    var fields = [];
+    var field = "";
+    var inQ = false;
+    while (pos < str.length) {
+      var ch = str[pos];
+      if (inQ) {
+        if (ch === '"' && str[pos+1] === '"') { field += '"'; pos += 2; }
+        else if (ch === '"') { inQ = false; pos++; }
+        else { field += ch; pos++; }
+      } else {
+        if (ch === '"') { inQ = true; pos++; }
+        else if (ch === ',') { fields.push(field.trim()); field = ""; pos++; }
+        else if (ch === '\r' && str[pos+1] === '\n' && !inQ) { pos += 2; break; }
+        else if ((ch === '\n' || ch === '\r') && !inQ) { pos++; break; }
+        else { field += ch; pos++; }
+      }
+    }
+    fields.push(field.trim());
+    return { fields: fields, pos: pos };
+  }
+  
+  var pos = 0;
+  var result = parseRow(text, pos);
+  headers = result.fields;
+  pos = result.pos;
+  
+  while (pos < text.length) {
+    result = parseRow(text, pos);
+    if (result.pos === pos) break;
+    pos = result.pos;
     var obj = {};
-    headers.forEach(function(h, i) { obj[h.trim()] = (vals[i] || "").trim(); });
-    return obj;
-  }).filter(function(row) {
-    // Filter out empty/blank rows — only keep rows with key fields populated
-    return (row["Email id"] || row["Hubspot id"] || row["Name"] || row["Amount refunded"]);
-  });
-}function splitCSVLine(line) {
-  var result = [], cur = "", inQ = false;
-  for (var i = 0; i < line.length; i++) {
-    var ch = line[i];
-    if (ch === '"') { inQ = !inQ; }
-    else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
-    else { cur += ch; }
+    headers.forEach(function(h, i) { obj[h.trim()] = (result.fields[i] || "").trim(); });
+    // Only include valid refund rows - must have a refund date and an identifier
+    // Valid row = must have a Name OR Hubspot id (learner identifier)
+    var hasName = obj["Name"] && obj["Name"].length > 1 && !obj["Name"].startsWith("v1:");
+    var hasHubspot = obj["Hubspot id"] && obj["Hubspot id"].length > 3;
+    var hasEmail = obj["Email id"] && obj["Email id"].indexOf("@") !== -1;
+    if (hasName || hasHubspot || hasEmail) rows.push(obj);
   }
-  result.push(cur);
-  return result;
+  return rows;
 }
-
-// FETCH SHEET
-async function fetchSheet() {
-  var btn = document.getElementById("refreshBtn");
-  if (btn) btn.textContent = "⏳ Loading…";
-  try {
-    var res = await fetch(SHEET_CSV_URL);
-    if (!res.ok) throw new Error("HTTP status " + res.status);
-    var text = await res.text();
-    if (!text || text.length < 10) throw new Error("Empty response");
-    sheetData = parseCSV(text);
-    if (sheetData.length === 0) throw new Error("No data rows found");
-    updateStats();
-    renderCharts();
-    renderFlexipay();
-    showToast("✅ Sheet loaded — " + sheetData.length + " records", false);
-  } catch(e) {
-    console.error("Sheet error:", e);
-    showToast("❌ Could not load sheet: " + e.message, true);
-  }
-  if (btn) btn.textContent = "🔄 Refresh Data";
-}
-
 // HELPERS
 function get(r, k) { return (r[k] || "").trim(); }
 function parseAmt(s) { return parseFloat((s||"").replace(/,/g,"")) || 0; }
