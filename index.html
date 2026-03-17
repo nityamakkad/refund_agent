@@ -88,6 +88,80 @@ function parseCSV(text) {
   }
   return rows;
 }
+
+function splitCSVLine(line) {
+  var result = [], cur = "", inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') { inQ = !inQ; }
+    else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
+    else { cur += ch; }
+  }
+  result.push(cur);
+  return result;
+}
+
+// HELPERS
+function get(r, k) { return (r[k] || "").trim(); }
+function parseAmt(s) { return parseFloat((s||"").replace(/,/g,"")) || 0; }
+function groupBy(field, limit) {
+  limit = limit || 12;
+  var c = {};
+  sheetData.forEach(function(r) {
+    var v = (r[field] || "").trim();
+    if (!v || v.length > 40 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
+    c[v] = (c[v] || 0) + 1;
+  });
+  var entries = Object.entries(c).sort(function(a,b){ return b[1]-a[1]; });
+  entries = entries.filter(function(e){
+    if (e[1] >= 2) return true;
+    return /^[A-Z0-9%_ ]+$/.test(e[0]);
+  });
+  return entries.slice(0, limit);
+}
+function countVal(field, val) {
+  return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
+}
+
+// TSV PARSER
+function parseTSV(text) {
+  var lines = text.split("\n");
+  var headers = lines[0].split("\t").map(function(h){ return h.trim(); });
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = line.split("\t");
+    var obj = {};
+    headers.forEach(function(h, k){ obj[h] = (vals[k] || "").trim(); });
+    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
+  }
+  return rows;
+}
+
+// FETCH SHEET
+async function fetchSheet() {
+  var btn = document.getElementById("refreshBtn");
+  if (btn) btn.textContent = "\u23F3 Loading...";
+  try {
+    var tsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv&t=" + Date.now();
+    var res = await fetch(tsvUrl);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var text = await res.text();
+    if (!text || text.length < 10) throw new Error("Empty response");
+    sheetData = parseTSV(text);
+    if (sheetData.length === 0) throw new Error("No valid rows found");
+    updateStats();
+    renderCharts();
+    renderFlexipay();
+    showToast("Sheet loaded - " + sheetData.length + " records", false);
+  } catch(e) {
+    console.error("Sheet error:", e);
+    showToast("Could not load sheet: " + e.message, true);
+  }
+  if (btn) btn.textContent = "\uD83D\uDD04 Refresh Data";
+}
+
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
   var total = sheetData.length;
@@ -475,45 +549,6 @@ function showToast(msg, err) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(function(){ t.remove(); }, 3000);
-}
-
-// TSV PARSER - handles multi-line fields correctly
-function parseTSV(text) {
-  var lines = text.split("\n");
-  var headers = lines[0].split("\t").map(function(h){ return h.trim(); });
-  var rows = [];
-  for (var i = 1; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-    var vals = line.split("\t");
-    var obj = {};
-    headers.forEach(function(h, k){ obj[h] = (vals[k] || "").trim(); });
-    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
-  }
-  return rows;
-}
-
-// FETCH SHEET
-async function fetchSheet() {
-  var btn = document.getElementById("refreshBtn");
-  if (btn) btn.textContent = "⏳ Loading...";
-  try {
-    var tsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv&t=" + Date.now();
-    var res = await fetch(tsvUrl);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var text = await res.text();
-    if (!text || text.length < 10) throw new Error("Empty response");
-    sheetData = parseTSV(text);
-    if (sheetData.length === 0) throw new Error("No valid rows found");
-    updateStats();
-    renderCharts();
-    renderFlexipay();
-    showToast("Sheet loaded — " + sheetData.length + " records", false);
-  } catch(e) {
-    console.error("Sheet error:", e);
-    showToast("Could not load sheet: " + e.message, true);
-  }
-  if (btn) btn.textContent = "🔄 Refresh Data";
 }
 
 window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
