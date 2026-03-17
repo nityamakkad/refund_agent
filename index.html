@@ -53,7 +53,8 @@
 
 <script>
 // API key is stored securely in Netlify environment variables — never in code
-const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
+const SHEET_TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv";
 const SHEET_GID = "1624835958";
 const SHEET_PUB_ID = "2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c";
 
@@ -474,6 +475,45 @@ function showToast(msg, err) {
   t.textContent = msg;
   document.body.appendChild(t);
   setTimeout(function(){ t.remove(); }, 3000);
+}
+
+// TSV PARSER - handles multi-line fields correctly
+function parseTSV(text) {
+  var lines = text.split("\n");
+  var headers = lines[0].split("\t").map(function(h){ return h.trim(); });
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = line.split("\t");
+    var obj = {};
+    headers.forEach(function(h, k){ obj[h] = (vals[k] || "").trim(); });
+    if ((obj["Invoice No."] || "").indexOf("IKUS") === 0) rows.push(obj);
+  }
+  return rows;
+}
+
+// FETCH SHEET
+async function fetchSheet() {
+  var btn = document.getElementById("refreshBtn");
+  if (btn) btn.textContent = "⏳ Loading...";
+  try {
+    var tsvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv&t=" + Date.now();
+    var res = await fetch(tsvUrl);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var text = await res.text();
+    if (!text || text.length < 10) throw new Error("Empty response");
+    sheetData = parseTSV(text);
+    if (sheetData.length === 0) throw new Error("No valid rows found");
+    updateStats();
+    renderCharts();
+    renderFlexipay();
+    showToast("Sheet loaded — " + sheetData.length + " records", false);
+  } catch(e) {
+    console.error("Sheet error:", e);
+    showToast("Could not load sheet: " + e.message, true);
+  }
+  if (btn) btn.textContent = "🔄 Refresh Data";
 }
 
 window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
