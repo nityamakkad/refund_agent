@@ -188,6 +188,12 @@ function buildPrompt() {
     "  • Not Eligible (exceptions): " + countVal("Eligible as per refund policy","no") + "\n\n" +
     "NEW vs ALUMNI:\n" +
     "  • New: " + countVal("New / Alumni","new") + " | Alumni: " + countVal("New / Alumni","alumni") + "\n\n" +
+    "DEPOSIT REFUND STATUS (column: Deposit also refunded):\n" +
+    "  IMPORTANT: This is completely separate from Flexipay. Every learner pays a deposit upfront when enrolling.\n" +
+    "  When a refund is processed, sometimes the deposit is also refunded (Yes) and sometimes it is retained (No).\n" +
+    "  • Deposit ALSO refunded (Yes): " + countVal("Deposit also refunded","yes") + " learners\n" +
+    "  • Deposit NOT refunded / retained (No): " + countVal("Deposit also refunded","no") + " learners\n" +
+    "  This has nothing to do with Flexipay installment payments. Flexipay = payment mode. Deposit = enrollment deposit.\n\n" +
     "ONBOARDING STATUS:\n" + fmt(groupBy("OB Status", 6)) + "\n\n" +
     "TOP PROGRAM ADVISORS:\n" + fmt(groupBy("PA", 8)) + "\n\n" +
     "TOP MANAGERS:\n" + fmt(groupBy("Manager", 8)) + "\n\n" +
