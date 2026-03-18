@@ -22,7 +22,7 @@
   .card{background:#ffffff;border:1px solid #d1d9e0;border-radius:10px;padding:10px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.07)}
   .card h3{font-size:12px;color:#1e40af;font-weight:600;margin-bottom:8px}
   .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
-  .msg-user{background:linear-gradient(135deg,#60a5fa,#3b82f6);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
+  .msg-user{background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
   .msg-ai{background:#ffffff;border:1px solid #cbd5e0;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap;word-break:break-word}
   .msg-label{font-size:10px;color:#1a56db;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
   .input-row{display:flex;gap:10px}
@@ -54,13 +54,12 @@
 <script>
 // API key is stored securely in Netlify environment variables — never in code
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
-const SHEET_TSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=tsv";
-const SHEET_GID = "1624835958";
-const SHEET_PUB_ID = "2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c";
+const ENROLL_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
 
-let sheetData = [];
-let messages  = [];
-let charts    = {};
+let sheetData   = [];   // refund data
+let enrollData  = [];   // enrollment data
+let messages    = [];
+let charts      = {};
 
 // CSV PARSER - handles multi-line quoted fields correctly
 function parseCSV(text) {
@@ -121,27 +120,54 @@ function countVal(field, val) {
   return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
 }
 
-// FETCH SHEET
+// FETCH BOTH SHEETS
 async function fetchSheet() {
   var btn = document.getElementById("refreshBtn");
   if (btn) btn.textContent = "Loading...";
+  var t = Date.now();
   try {
-    var url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv&t=" + Date.now();
-    var res = await fetch(url);
-    if (!res.ok) throw new Error("HTTP " + res.status);
-    var text = await res.text();
-    if (!text || text.length < 10) throw new Error("Empty response");
-    sheetData = parseCSV(text);
-    if (sheetData.length === 0) throw new Error("No valid rows found");
+    // Fetch refund tab
+    var res1 = await fetch(SHEET_CSV_URL + "&t=" + t);
+    if (!res1.ok) throw new Error("Refund tab HTTP " + res1.status);
+    var text1 = await res1.text();
+    sheetData = parseCSV(text1);
+
+    // Fetch enrollment tab
+    try {
+      var res2 = await fetch(ENROLL_CSV_URL + "&t=" + t);
+      if (res2.ok) {
+        var text2 = await res2.text();
+        enrollData = parseEnrollCSV(text2);
+      }
+    } catch(e2) { console.warn("Enrollment tab not loaded:", e2); }
+
+    if (sheetData.length === 0) throw new Error("No valid refund rows found");
     updateStats();
     renderCharts();
     renderFlexipay();
-    showToast("Sheet loaded - " + sheetData.length + " records", false);
+    showToast("Loaded — " + sheetData.length + " refunds, " + enrollData.length + " enrollments", false);
   } catch(e) {
     console.error("Sheet error:", e);
     showToast("Could not load: " + e.message, true);
   }
-  if (btn) btn.textContent = "Refresh Data";
+  if (btn) btn.textContent = "🔄 Refresh Data";
+}
+
+// ENROLLMENT CSV PARSER (simpler - no multi-line issue in enrollment data)
+function parseEnrollCSV(text) {
+  var lines = text.split("\n");
+  var headers = splitCSVLine(lines[0]);
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = splitCSVLine(line);
+    var obj = {};
+    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
+    // Valid enrollment row = has Email/HS ID (always filled)
+    if (obj["Email / HS ID"] || obj["Name"] || obj["Candidate ID"]) rows.push(obj);
+  }
+  return rows;
 }
 
 // BUILD SYSTEM PROMPT
@@ -170,7 +196,7 @@ function buildPrompt() {
     return name + " | " + get(r,"Course") + " | $" + get(r,"Amount refunded") + " | " + get(r,"Refund Category") + " | " + get(r,"BU") + " | PA:" + get(r,"PA") + " | Manager:" + get(r,"Manager");
   }).join("\n");
 
-  return "You are an expert EdTech Refund Data Analyst AI. You have LIVE data from a Google Sheet with " + total + " refund records. Answer every question with exact numbers. Be precise, concise, and use bullet points or tables when helpful.\n\n" +
+  return "You are an expert EdTech Data Analyst AI for an EdTech company. You have LIVE data from TWO tabs of a Google Sheet: (1) Enrollment data with " + enrollData.length + " enrollments and (2) Refund data with " + total + " refunds — both for Q4 2025. Answer every question with exact numbers. Be precise, concise, and use bullet points or tables when helpful.\n\n" +
     "DATASET OVERVIEW:\n" +
     "Total Records: " + total + " | All sales: Dropped\n" +
     "Total Amount Refunded: $" + refunded.toLocaleString() + "\n" +
@@ -199,6 +225,61 @@ function buildPrompt() {
     "TOP MANAGERS:\n" + fmt(groupBy("Manager", 8)) + "\n\n" +
     "FLEXIPAY LEARNERS (" + flex.length + " total — pay in monthly installments, Amount Credited = one installment only):\n" + flexDetails + "\n\n" +
     "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
+    "ENROLLMENT DATA (Tab: Enrollments):\n" +
+    "Total Enrollments Q4 2025: " + enrollData.length + "\n" +
+    "All " + enrollData.length + " enrollment rows have at least one identifier (Email/HS ID, Name, or Candidate ID).\n\n" +
+    "REFUND RATE:\n" +
+    "  • Total Enrollments: " + enrollData.length + "\n" +
+    "  • Total Refunds: " + total + "\n" +
+    "  • Refund Rate: " + (enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1) : "N/A") + "%\n\n" +
+    "ENROLLMENT PAYMENT STATUS (Current Payment Status column):\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Current Payment Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]+" ("+((e[1]/enrollData.length)*100).toFixed(1)+"%)"; }).join("\n");
+    })() + "\n\n" +
+    "ENROLLMENT BY PROGRAM TYPE:\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Program Type"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+    })() + "\n\n" +
+    "ENROLLMENT PAYMENT MODE:\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Payment Mode"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).slice(0,8).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+    })() + "\n\n" +
+    "ONBOARDING STATUS (Enrollment):\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["OB STATUS"]||"").trim()||"Blank/Unknown"; c[v]=(c[v]||0)+1; });
+      var blankCount = enrollData.filter(function(r){ return !(r["OB STATUS"]||"").trim(); }).length;
+      var out = Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+      if(blankCount>0) out += "\n  Note: "+blankCount+" rows have blank OB STATUS — all have valid Email/HS ID identifiers";
+      return out;
+    })() + "\n\n" +
+    "TOP SSAs BY ENROLLMENT (Current SSA):\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Current SSA"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).slice(0,10).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+    })() + "\n\n" +
+    "EMPTY FIELD NOTES (Enrollment Tab — all have email/name/ID even if other fields blank):\n" +
+    "  • Candidate ID: " + enrollData.filter(function(r){return !(r["Candidate ID"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
+    "  • Name: " + enrollData.filter(function(r){return !(r["Name"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
+    "  • HS ID: " + enrollData.filter(function(r){return !(r["HS ID"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
+    "  • Time Zone: " + enrollData.filter(function(r){return !(r["Time Zone"]||"").trim();}).length + " blank\n" +
+    "  • Program Name: " + enrollData.filter(function(r){return !(r["Program Name"]||"").trim();}).length + " blank\n" +
+    "  • Current Cohort: " + enrollData.filter(function(r){return !(r["Current Cohort"]||"").trim();}).length + " blank\n" +
+    "  • OB STATUS: " + enrollData.filter(function(r){return !(r["OB STATUS"]||"").trim();}).length + " blank\n" +
+    "  • Original SSA: " + enrollData.filter(function(r){return !(r["Original SSA"]||"").trim();}).length + " blank\n\n" +
+    "QUARTER & YEAR (Enrollment Tab):\n" + (function(){
+      var qc={}, yc={};
+      enrollData.forEach(function(r){
+        var q=(r["Quarter"]||"").trim(); if(q) qc[q]=(qc[q]||0)+1;
+        var y=(r["Year"]||"").trim(); if(y) yc[y]=(yc[y]||0)+1;
+      });
+      return "  Quarters: "+Object.entries(qc).map(function(e){return e[0]+":"+e[1];}).join(", ")+"\n"+
+             "  Years: "+Object.entries(yc).map(function(e){return e[0]+":"+e[1];}).join(", ");
+    })() + "\n\n" +
+    "DEPOSIT PAID DATE: All " + enrollData.length + " enrollments have a Deposit Paid Date (format YYYY-MM-DD).\n" +
+    "  This is when the learner first paid their deposit to secure enrollment.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
     (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
     "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
@@ -384,11 +465,15 @@ function updateStats() {
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
   var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
 
+  var refundRate = enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1)+"%" : "N/A";
+  var fullyPaid = enrollData.filter(function(r){ return (r["Current Payment Status"]||"").trim()==="Fully Paid"; }).length;
+  var onboarded = enrollData.filter(function(r){ return (r["OB STATUS"]||"").trim()==="Onboarded"; }).length;
   var stats = [
-    {l:"Total Refunds", v:total, c:"#1a56db", i:"↩"},
-    {l:"Total Refunded", v:"$"+Math.round(refunded/1000)+"K", c:"#f87171", i:"💸"},
-    {l:"In Trial Window", v:Math.round(inTrial/total*100)+"%", c:"#34d399", i:"⏱"},
-    {l:"Flexipay Learners", v:flex, c:"#fbbf24", i:"💳"},
+    {l:"Total Enrollments", v:enrollData.length||"—", c:"#1a56db", i:"🎓"},
+    {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
+    {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
+    {l:"Fully Paid", v:fullyPaid||"—", c:"#34d399", i:"✅"},
+    {l:"Total Refunded $", v:"$"+Math.round(refunded/1000)+"K", c:"#f59e0b", i:"💸"},
     {l:"PA Mis-sell", v:paMissell, c:"#e879f9", i:"⚠️"}
   ];
 
@@ -594,8 +679,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   <div style="display:flex;align-items:center;gap:10px">
     <div class="logo">📊</div>
     <div>
-      <h1 style="font-size:18px;font-weight:700;color:#ffffff">Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#718096">Live from Google Sheets</p>
+      <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
+      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds · Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -615,7 +700,12 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <!-- CHAT PANEL -->
 <div id="panel-chat" class="panel active">
   <div class="pills">
-    <span class="pill" onclick="sendMessage('Give me an executive summary of Q4 refunds')">Executive summary</span>
+    <span class="pill" onclick="sendMessage('Give me an executive summary of Q4 enrollments and refunds')">Executive summary</span>
+    <span class="pill" onclick="sendMessage('What is the refund rate for Q4 2025?')">Refund rate</span>
+    <span class="pill" onclick="sendMessage('How many learners are fully paid vs refunded?')">Payment status</span>
+    <span class="pill" onclick="sendMessage('Which program type has most enrollments?')">Program analysis</span>
+    <span class="pill" onclick="sendMessage('What is the onboarding success rate?')">OB success rate</span>
+    <span class="pill" onclick="sendMessage('Which SSA has most enrollments?')">SSA breakdown</span>
     <span class="pill" onclick="sendMessage('What are the top 5 refund reasons with counts?')">Top refund reasons</span>
     <span class="pill" onclick="sendMessage('Analyse all PA Mis-sell cases in detail')">PA Mis-sell analysis</span>
     <span class="pill" onclick="sendMessage('Show me all Flexipay learner details')">Flexipay details</span>
