@@ -198,7 +198,7 @@ function buildPrompt() {
     return "  • " + name + " | Credited: $" + get(r,"Amount Credited") + " | Refunded: $" + get(r,"Amount refunded") + " | Window: " + get(r,"Refund period Bucket") + " | Category: " + get(r,"Refund Category") + " | Course: " + get(r,"Course");
   }).join("\n");
 
-  var sampleRecords = sheetData.slice(0,30).map(function(r) {
+  var sampleRecords = sheetData.slice(0,10).map(function(r) {
     var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + get(r,"Hubspot id");
     return name + " | " + get(r,"Course") + " | $" + get(r,"Amount refunded") + " | " + get(r,"Refund Category") + " | " + get(r,"BU") + " | PA:" + get(r,"PA") + " | Manager:" + get(r,"Manager");
   }).join("\n");
@@ -211,6 +211,50 @@ function buildPrompt() {
     "REFUND CATEGORIES:\n" + fmt(groupBy("Refund Category")) + "\n\n" +
     "BY COURSE:\n" + fmt(groupBy("Course", 10)) + "\n\n" +
     "BY BU:\n" + fmt(groupBy("BU")) + "\n\n" +
+    "REFUND DATA SOURCE: All refund questions must use ONLY the Refunds Q4 tab data (sheetData). Never mix with enrollment data for refund counts.\n\n" +
+    "COMPLETE BU > CATEGORY > COURSE HIERARCHY (Refunds Q4 tab):\n" +
+    "BU: AI\n" +
+    "  Category: Switch-up\n" +
+    "    Course: Flagship ML — 27 | Project-up — 2 | Machine Learning — 2\n" +
+    "  Category: Agent-up\n" +
+    "    Course: Applied Agentic AI — 10 | Agentic AI Pathway — 2 | Agentic AI Architecture — 1\n" +
+    "  Category: Edge-up LU\n" +
+    "    Course: Backend — 6 | TPM — 6 | EM — 4 | Product Management — 3 | Test Engineering — 3 | Fullstack — 2 | Data Analyst — 1 | AWS Cloud — 1 | Security Engineering — 1\n" +
+    "  Category: Edge-up SU\n" +
+    "    Course: Backend — 2 | TPM — 1 | Product Management — 1 | EM — 1 | Test Engineering — 1\n" +
+    "  Category: Agent-up LU\n" +
+    "    Course: TPM — 2 | Fullstack — 1\n" +
+    "  Category: Agent-up SU\n" +
+    "    Course: EM — 1\n" +
+    "  Category: Step-up\n" +
+    "    Course: Machine Learning — 3 | Advanced ML — 1\n" +
+    "\n" +
+    "BU: Interview Prep\n" +
+    "  Category: Edge-up LU\n" +
+    "    Course: EM — 7 | TPM — 5 | Data Science — 2 | Product Management — 2 | Machine Learning — 1 | Backend — 1 | Test Engineering — 1 | Fullstack — 1 | Data Analyst — 1 | SRE — 1 | Data Engineering — 1\n" +
+    "  Category: Level-up\n" +
+    "    Course: Fullstack — 3 | Data Analyst — 3 | Test Engineering — 3 | Growth Product Manager — 2 | Machine Learning — 2 | AWS Cloud — 2 | Embedded System — 2 | Security Engineering — 1 | EM — 1 | Data Science — 1 | Data Engineering — 1\n" +
+    "  Category: Edge-up SU\n" +
+    "    Course: Backend — 2 | Test Engineering — 1 | Embedded Systems — 1 | Fullstack — 1\n" +
+    "  Category: Step-up\n" +
+    "    Course: TPM — 4 | Embedded Systems — 1 | EM — 1 | Product Management — 1 | Machine Learning — 1 | SRE — 1\n" +
+    "  Category: Move-up LU\n" +
+    "    Course: EM — 1 | Data Analyst — 1\n" +
+    "  Category: Pathway\n" +
+    "    Course: Data Science — 1 | Career — 1 | Data Engineering — 1\n" +
+    "  Category: Boost-up\n" +
+    "    Course: Mentoring — 1\n" +
+    "\n" +
+    "HIERARCHY RULES:\n" +
+    "  • When asked about EdgeUp/Edge-up refunds — look at BOTH Edge-up LU and Edge-up SU categories across BOTH BUs\n" +
+    "  • Edge-up LU total refunds: AI(23) + Interview Prep(22) = 45 refunds\n" +
+    "  • Edge-up SU total refunds: AI(6) + Interview Prep(5) = 11 refunds\n" +
+    "  • EdgeUp combined (LU+SU): 56 refunds\n" +
+    "  • When asked about a course like TPM — sum across ALL categories and BUs where TPM appears\n" +
+    "  • When asked about Switch-up refunds — look ONLY at Switch-up category\n" +
+    "  • BU = top level grouping (AI or Interview Prep)\n" +
+    "  • Category = program type (Switch-up, Edge-up LU, Edge-up SU, Agent-up etc.)\n" +
+    "  • Course = specific program within category (Flagship ML, TPM, EM etc.)\n\n" +
     "BY PAYMENT MODE:\n" + fmt(groupBy("Payment Mode")) + "\n\n" +
     "PROGRAM CATEGORY:\n" + fmt(groupBy("Category", 8)) + "\n\n" +
     "TRIAL WINDOW:\n" +
@@ -297,15 +341,7 @@ function buildPrompt() {
       enrollData.forEach(function(r){ var v=(r["Current SSA"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
       return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).slice(0,10).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
     })() + "\n\n" +
-    "EMPTY FIELD NOTES (Enrollment Tab — all have email/name/ID even if other fields blank):\n" +
-    "  • Candidate ID: " + enrollData.filter(function(r){return !(r["Candidate ID"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
-    "  • Name: " + enrollData.filter(function(r){return !(r["Name"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
-    "  • HS ID: " + enrollData.filter(function(r){return !(r["HS ID"]||"").trim();}).length + " blank (all have Email/HS ID)\n" +
-    "  • Time Zone: " + enrollData.filter(function(r){return !(r["Time Zone"]||"").trim();}).length + " blank\n" +
-    "  • Program Name: " + enrollData.filter(function(r){return !(r["Program Name"]||"").trim();}).length + " blank\n" +
-    "  • Current Cohort: " + enrollData.filter(function(r){return !(r["Current Cohort"]||"").trim();}).length + " blank\n" +
-    "  • OB STATUS: " + enrollData.filter(function(r){return !(r["OB STATUS"]||"").trim();}).length + " blank\n" +
-    "  • Original SSA: " + enrollData.filter(function(r){return !(r["Original SSA"]||"").trim();}).length + " blank\n\n" +
+    "EMPTY FIELDS NOTE: Some fields are blank but all rows have at least Email/HS ID as identifier. Key blank counts: Candidate ID, Name, HS ID, Time Zone, Program Name, Current Cohort, OB STATUS, Original SSA — all have valid Email/HS ID even when blank.\n\n" +
     "QUARTER & YEAR (Enrollment Tab):\n" + (function(){
       var qc={}, yc={};
       enrollData.forEach(function(r){
@@ -318,7 +354,7 @@ function buildPrompt() {
     "DEPOSIT PAID DATE: All " + enrollData.length + " enrollments have a Deposit Paid Date (format YYYY-MM-DD).\n" +
     "  This is when the learner first paid their deposit to secure enrollment.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
-    (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
+    (sheetData.length > 10 ? "...and " + (sheetData.length - 10) + " more records\n" : "") +
     "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
     "  This column shows how many days passed between the learner payment date and the refund date.\n" +
     "  • Within 1 week (0-7 days): " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=0 && d<=7; }).length + " learners\n" +
@@ -364,7 +400,7 @@ async function sendMessage(prefill) {
     var requestBody = {
       system_instruction: { parts: [{ text: buildPrompt() }] },
       contents: messages,
-      generationConfig: { temperature: 0.5, maxOutputTokens: 800 }
+      generationConfig: { temperature: 0.5, maxOutputTokens: 600 }
     };
 
     // Call our secure Netlify function — API key never exposed in browser
@@ -744,6 +780,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <span class="pill" onclick="sendMessage('How many learners are fully paid vs refunded?')">Payment status</span>
     <span class="pill" onclick="sendMessage('Which program type has most enrollments?')">Program analysis</span>
     <span class="pill" onclick="sendMessage('What is the onboarding success rate?')">OB success rate</span>
+    <span class="pill" onclick="sendMessage('Which SSA has most enrollments?')">SSA breakdown</span>
     <span class="pill" onclick="sendMessage('What are the top 5 refund reasons with counts?')">Top refund reasons</span>
     <span class="pill" onclick="sendMessage('Analyse all PA Mis-sell cases in detail')">PA Mis-sell analysis</span>
     <span class="pill" onclick="sendMessage('Show me all Flexipay learner details')">Flexipay details</span>
