@@ -212,49 +212,34 @@ function buildPrompt() {
     "BY COURSE:\n" + fmt(groupBy("Course", 10)) + "\n\n" +
     "BY BU:\n" + fmt(groupBy("BU")) + "\n\n" +
     "REFUND DATA SOURCE: All refund questions must use ONLY the Refunds Q4 tab data (sheetData). Never mix with enrollment data for refund counts.\n\n" +
-    "COMPLETE BU > CATEGORY > COURSE HIERARCHY (Refunds Q4 tab):\n" +
-    "BU: AI\n" +
-    "  Category: Switch-up\n" +
-    "    Course: Flagship ML — 27 | Project-up — 2 | Machine Learning — 2\n" +
-    "  Category: Agent-up\n" +
-    "    Course: Applied Agentic AI — 10 | Agentic AI Pathway — 2 | Agentic AI Architecture — 1\n" +
-    "  Category: Edge-up LU\n" +
-    "    Course: Backend — 6 | TPM — 6 | EM — 4 | Product Management — 3 | Test Engineering — 3 | Fullstack — 2 | Data Analyst — 1 | AWS Cloud — 1 | Security Engineering — 1\n" +
-    "  Category: Edge-up SU\n" +
-    "    Course: Backend — 2 | TPM — 1 | Product Management — 1 | EM — 1 | Test Engineering — 1\n" +
-    "  Category: Agent-up LU\n" +
-    "    Course: TPM — 2 | Fullstack — 1\n" +
-    "  Category: Agent-up SU\n" +
-    "    Course: EM — 1\n" +
-    "  Category: Step-up\n" +
-    "    Course: Machine Learning — 3 | Advanced ML — 1\n" +
+    "COMPLETE BU > CATEGORY > COURSE HIERARCHY (Refunds Q4 tab — verified from raw data):\n" +
+    "IMPORTANT: Flagship ML is ONLY under Switch-up. It is NOT an EdgeUp course.\n\n" +
+    "BU: AI (85 total refunds)\n" +
+    "  Switch-up (31): Flagship ML-27 | Project-up-2 | Machine Learning-2\n" +
+    "  Agent-up (13): Applied Agentic AI-10 | Agentic AI Pathway-2 | Agentic AI Architecture-1\n" +
+    "  Edge-up LU (27): Backend-6 | TPM-6 | EM-4 | Product Management-3 | Test Engineering-3 | Fullstack-2 | Data Analyst-1 | AWS Cloud-1 | Security Engineering-1\n" +
+    "  Edge-up SU (6): Backend-2 | TPM-1 | Product Management-1 | EM-1 | Test Engineering-1\n" +
+    "  Agent-up LU (3): TPM-2 | Fullstack-1\n" +
+    "  Agent-up SU (1): EM-1\n" +
+    "  Step-up (4): Machine Learning-3 | Advanced ML-1\n" +
     "\n" +
-    "BU: Interview Prep\n" +
-    "  Category: Edge-up LU\n" +
-    "    Course: EM — 7 | TPM — 5 | Data Science — 2 | Product Management — 2 | Machine Learning — 1 | Backend — 1 | Test Engineering — 1 | Fullstack — 1 | Data Analyst — 1 | SRE — 1 | Data Engineering — 1\n" +
-    "  Category: Level-up\n" +
-    "    Course: Fullstack — 3 | Data Analyst — 3 | Test Engineering — 3 | Growth Product Manager — 2 | Machine Learning — 2 | AWS Cloud — 2 | Embedded System — 2 | Security Engineering — 1 | EM — 1 | Data Science — 1 | Data Engineering — 1\n" +
-    "  Category: Edge-up SU\n" +
-    "    Course: Backend — 2 | Test Engineering — 1 | Embedded Systems — 1 | Fullstack — 1\n" +
-    "  Category: Step-up\n" +
-    "    Course: TPM — 4 | Embedded Systems — 1 | EM — 1 | Product Management — 1 | Machine Learning — 1 | SRE — 1\n" +
-    "  Category: Move-up LU\n" +
-    "    Course: EM — 1 | Data Analyst — 1\n" +
-    "  Category: Pathway\n" +
-    "    Course: Data Science — 1 | Career — 1 | Data Engineering — 1\n" +
-    "  Category: Boost-up\n" +
-    "    Course: Mentoring — 1\n" +
+    "BU: Interview Prep (64 total refunds)\n" +
+    "  Edge-up LU (23): EM-7 | TPM-5 | Data Science-2 | Product Management-2 | Machine Learning-1 | Backend-1 | Test Engineering-1 | Fullstack-1 | Data Analyst-1 | SRE-1 | Data Engineering-1\n" +
+    "  Level-up (21): Fullstack-3 | Data Analyst-3 | Test Engineering-3 | Growth Product Manager-2 | Machine Learning-2 | AWS Cloud-2 | Embedded System-2 | Security Engineering-1 | EM-1 | Data Science-1 | Data Engineering-1\n" +
+    "  Edge-up SU (5): Backend-2 | Test Engineering-1 | Embedded Systems-1 | Fullstack-1\n" +
+    "  Step-up (9): TPM-4 | Embedded Systems-1 | EM-1 | Product Management-1 | Machine Learning-1 | SRE-1\n" +
+    "  Move-up LU (2): EM-1 | Data Analyst-1\n" +
+    "  Pathway (3): Data Science-1 | Career-1 | Data Engineering-1\n" +
+    "  Boost-up (1): Mentoring-1\n" +
     "\n" +
-    "HIERARCHY RULES:\n" +
-    "  • When asked about EdgeUp/Edge-up refunds — look at BOTH Edge-up LU and Edge-up SU categories across BOTH BUs\n" +
-    "  • Edge-up LU total refunds: AI(23) + Interview Prep(22) = 45 refunds\n" +
-    "  • Edge-up SU total refunds: AI(6) + Interview Prep(5) = 11 refunds\n" +
-    "  • EdgeUp combined (LU+SU): 56 refunds\n" +
-    "  • When asked about a course like TPM — sum across ALL categories and BUs where TPM appears\n" +
-    "  • When asked about Switch-up refunds — look ONLY at Switch-up category\n" +
-    "  • BU = top level grouping (AI or Interview Prep)\n" +
-    "  • Category = program type (Switch-up, Edge-up LU, Edge-up SU, Agent-up etc.)\n" +
-    "  • Course = specific program within category (Flagship ML, TPM, EM etc.)\n\n" +
+    "KEY HIERARCHY RULES:\n" +
+    "  • EdgeUp questions = ONLY Edge-up LU + Edge-up SU categories (NOT Switch-up, NOT Agent-up)\n" +
+    "  • Edge-up LU: AI(27) + Interview Prep(23) = 50 total refunds\n" +
+    "  • Edge-up SU: AI(6) + Interview Prep(5) = 11 total refunds\n" +
+    "  • EdgeUp combined (LU+SU) = 61 refunds. Top course: EM with 12 (4+1+7+1), TPM with 12 (6+1+5)\n" +
+    "  • Switch-up courses: Flagship ML(27), Project-up(2), Machine Learning(2) — NOT EdgeUp\n" +
+    "  • When asked about a specific course, sum it across ALL categories and BUs\n" +
+    "  • BU = AI or Interview Prep | Category = program type | Course = specific program\n\n" +
     "BY PAYMENT MODE:\n" + fmt(groupBy("Payment Mode")) + "\n\n" +
     "PROGRAM CATEGORY:\n" + fmt(groupBy("Category", 8)) + "\n\n" +
     "TRIAL WINDOW:\n" +
