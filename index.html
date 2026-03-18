@@ -232,11 +232,31 @@ function buildPrompt() {
     "  • Total Enrollments: " + enrollData.length + "\n" +
     "  • Total Refunds: " + total + "\n" +
     "  • Refund Rate: " + (enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1) : "N/A") + "%\n\n" +
-    "ENROLLMENT PAYMENT STATUS (Current Payment Status column):\n" + (function(){
+    "PAYMENT COLUMNS EXPLAINED:\n" +
+    "  Column J (Status) = Initial payment status when learner first joined:\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
+    })() + "\n\n" +
+    "  Column K (payment_status) = System payment status (technical field):\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["payment_status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
+    })() + "\n\n" +
+    "  Column L (Current Payment Status) = Learner's LIVE current status (most up-to-date):\n" + (function(){
       var c={};
       enrollData.forEach(function(r){ var v=(r["Current Payment Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]+" ("+((e[1]/enrollData.length)*100).toFixed(1)+"%)"; }).join("\n");
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]+" ("+((e[1]/enrollData.length)*100).toFixed(1)+"%)"; }).join("\n");
     })() + "\n\n" +
+    "  Column S (Final Status) = Manager's preferred categorisation (Upfront / Non-Upfront / Flexipay etc):\n" + (function(){
+      var c={};
+      enrollData.forEach(function(r){ var v=(r["Final Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
+      var out = Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
+      return out || "    (Final Status column data will load from live sheet)";
+    })() + "\n" +
+    "  IMPORTANT: When manager asks about upfront/non-upfront/flexipay always use Column S (Final Status).\n" +
+    "  When asked about refunded/dropped/dispute use Column L (Current Payment Status).\n" +
+    "  When asked about initial payment type at enrollment use Column J (Status).\n\n" +
     "ENROLLMENT BY PROGRAM TYPE:\n" + (function(){
       var c={};
       enrollData.forEach(function(r){ var v=(r["Program Type"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
@@ -466,15 +486,23 @@ function updateStats() {
   var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
 
   var refundRate = enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1)+"%" : "N/A";
-  var fullyPaid = enrollData.filter(function(r){ return (r["Current Payment Status"]||"").trim()==="Fully Paid"; }).length;
-  var onboarded = enrollData.filter(function(r){ return (r["OB STATUS"]||"").trim()==="Onboarded"; }).length;
+  // Final Status column (S) = manager's preferred categorisation
+  var upfront = enrollData.filter(function(r){ return (r["Final Status"]||"").trim().toLowerCase()==="upfront"; }).length;
+  var nonUpfront = enrollData.filter(function(r){
+    var s = (r["Final Status"]||"").trim().toLowerCase();
+    return s==="non upfront" || s==="non-upfront";
+  }).length;
+  var flexipayEnroll = enrollData.filter(function(r){
+    var s = (r["Final Status"]||"").trim().toLowerCase();
+    return s.indexOf("flexipay") !== -1;
+  }).length;
   var stats = [
     {l:"Total Enrollments", v:enrollData.length||"—", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
     {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
-    {l:"Fully Paid", v:fullyPaid||"—", c:"#34d399", i:"✅"},
-    {l:"Total Refunded $", v:"$"+Math.round(refunded/1000)+"K", c:"#f59e0b", i:"💸"},
-    {l:"PA Mis-sell", v:paMissell, c:"#e879f9", i:"⚠️"}
+    {l:"Upfront", v:upfront||"—", c:"#34d399", i:"✅"},
+    {l:"Non-Upfront", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
+    {l:"Flexipay", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
   ];
 
   var bar = document.getElementById("statsBar");
