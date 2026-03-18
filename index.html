@@ -155,7 +155,16 @@ async function fetchSheet() {
 
 // ENROLLMENT CSV PARSER (simpler - no multi-line issue in enrollment data)
 function parseEnrollCSV(text) {
-  var lines = text.split("\n");
+  // Multiline fix - same as refund CSV parser
+  var cleaned = [];
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') { inQ = !inQ; cleaned.push(ch); }
+    else if ((ch === "\n" || ch === "\r") && inQ) { cleaned.push(" "); }
+    else { cleaned.push(ch); }
+  }
+  var lines = cleaned.join("").split("\n");
   var headers = splitCSVLine(lines[0]);
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
@@ -164,12 +173,10 @@ function parseEnrollCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
-    // Valid enrollment row = has Email/HS ID (always filled)
     if (obj["Email / HS ID"] || obj["Name"] || obj["Candidate ID"]) rows.push(obj);
   }
   return rows;
 }
-
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
   // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
@@ -232,31 +239,41 @@ function buildPrompt() {
     "  • Total Enrollments: " + enrollData.length + "\n" +
     "  • Total Refunds: " + total + "\n" +
     "  • Refund Rate: " + (enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1) : "N/A") + "%\n\n" +
-    "PAYMENT COLUMNS EXPLAINED:\n" +
-    "  Column J (Status) = Initial payment status when learner first joined:\n" + (function(){
+    "PAYMENT COLUMNS — THERE ARE 4, EACH MEANS SOMETHING DIFFERENT:\n" +
+    "\n" +
+    "1. Column J = Status (Initial payment status when learner FIRST joined):\n" +
+    "   This shows how the learner paid at the time of enrollment.\n" + (function(){
       var c={};
       enrollData.forEach(function(r){ var v=(r["Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "   • "+e[0]+": "+e[1]; }).join("\n");
     })() + "\n\n" +
-    "  Column K (payment_status) = System payment status (technical field):\n" + (function(){
+    "2. Column K = payment_status (Backend/system technical status — not for manager queries):\n" + (function(){
       var c={};
       enrollData.forEach(function(r){ var v=(r["payment_status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
+      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "   • "+e[0]+": "+e[1]; }).join("\n");
     })() + "\n\n" +
-    "  Column L (Current Payment Status) = Learner's LIVE current status (most up-to-date):\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Current Payment Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]+" ("+((e[1]/enrollData.length)*100).toFixed(1)+"%)"; }).join("\n");
-    })() + "\n\n" +
-    "  Column S (Final Status) = Manager's preferred categorisation (Upfront / Non-Upfront / Flexipay etc):\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Final Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      var out = Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "    • "+e[0]+": "+e[1]; }).join("\n");
-      return out || "    (Final Status column data will load from live sheet)";
-    })() + "\n" +
-    "  IMPORTANT: When manager asks about upfront/non-upfront/flexipay always use Column S (Final Status).\n" +
-    "  When asked about refunded/dropped/dispute use Column L (Current Payment Status).\n" +
-    "  When asked about initial payment type at enrollment use Column J (Status).\n\n" +
+    "3. Column L = Live Status (LIVE current status of each learner — use for refund/dropout queries):\n" +
+    "   Fully Paid = learner has completed all payments: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Fully Paid"; }).length + "\n" +
+    "   Flexipay_has_time_to_pay = still paying in installments: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Flexipay_has_time_to_pay"; }).length + "\n" +
+    "   Refunded = learner was refunded in Q4: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Refunded"; }).length + "\n" +
+    "   Pre Q4 Refund = refunded before Q4: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Pre Q4 Refund"; }).length + "\n" +
+    "   Dropped Out: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Dropped Out"; }).length + "\n" +
+    "   PA Mis-Sell: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="PA Mis-Sell"; }).length + "\n" +
+    "   Dispute Lost - Pre Q4 Lead: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Dispute Lost - Pre Q4 Lead"; }).length + "\n" +
+    "   Other statuses (Invalid, Proactive Refund, Potential Error, Not to be Counted etc): remaining\n\n" +
+    "4. Column S = Final Status (MANAGER PREFERRED VIEW — use this for Upfront/Non-Upfront/Flexipay questions):\n" +
+    "   Upfront = paid full amount upfront: " + enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Upfront"; }).length + "\n" +
+    "   Non Upfront = paid in installments (not flexipay): " + enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Non Upfront"; }).length + "\n" +
+    "   Flexipay = on 0% APR flexipay plan: " + enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Flexipay"; }).length + "\n" +
+    "   Pre Q4 Refund: " + enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Pre Q4 Refund"; }).length + "\n" +
+    "   Other (Dispute Lost, PA Mis-Sell, PE, Not to be Counted): remaining\n\n" +
+    "IMPORTANT RULES FOR ANSWERING:\n" +
+    "   • 'How many upfront/non-upfront/flexipay?' → ALWAYS use Column S (Final Status)\n" +
+    "   • 'How many refunded/dropped/dispute?' → use Column L (Live Status)\n" +
+    "   • 'How many fully paid?' → Column L Fully Paid = " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Fully Paid"; }).length + "\n" +
+    "   • Column J and K are system fields — only use if specifically asked\n" +
+    "   NOTE: The manager may see different numbers in the sheet if they apply filters.\n" +
+    "   Always state which column you used when answering payment questions.\n\n" +
     "ENROLLMENT BY PROGRAM TYPE:\n" + (function(){
       var c={};
       enrollData.forEach(function(r){ var v=(r["Program Type"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
@@ -486,16 +503,10 @@ function updateStats() {
   var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
 
   var refundRate = enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1)+"%" : "N/A";
-  // Final Status column (S) = manager's preferred categorisation
-  var upfront = enrollData.filter(function(r){ return (r["Final Status"]||"").trim().toLowerCase()==="upfront"; }).length;
-  var nonUpfront = enrollData.filter(function(r){
-    var s = (r["Final Status"]||"").trim().toLowerCase();
-    return s==="non upfront" || s==="non-upfront";
-  }).length;
-  var flexipayEnroll = enrollData.filter(function(r){
-    var s = (r["Final Status"]||"").trim().toLowerCase();
-    return s.indexOf("flexipay") !== -1;
-  }).length;
+  // Final Status column S = manager's preferred view
+  var upfront = enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Upfront"; }).length;
+  var nonUpfront = enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Non Upfront"; }).length;
+  var flexipayEnroll = enrollData.filter(function(r){ return (r["Final Status"]||"").trim()==="Flexipay"; }).length;
   var stats = [
     {l:"Total Enrollments", v:enrollData.length||"—", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
