@@ -201,6 +201,29 @@ function buildPrompt() {
     "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
     (sheetData.length > 30 ? "...and " + (sheetData.length - 30) + " more records\n" : "") +
+    "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
+    "  This column shows how many days passed between the learner payment date and the refund date.\n" +
+    "  • Within 1 week (0-7 days): " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=0 && d<=7; }).length + " learners\n" +
+    "  • 8 to 21 days: " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=8 && d<=21; }).length + " learners\n" +
+    "  • Over 21 days: " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>21; }).length + " learners\n" +
+    "  Column AK (Receipt Date - Refund Date Bucket) groups these as: 0-7, 8 to 21, >21\n" +
+    "  Bucket counts — 0-7: " + countVal("Receipt Date - Refund Date Bucket","0-7") + " | 8 to 21: " + countVal("Receipt Date - Refund Date Bucket","8 to 21") + " | >21: " + countVal("Receipt Date - Refund Date Bucket",">21") + "\n\n" +
+    "QUARTER AND YEAR COLUMNS (AN and AO — newly added by the team):\n" +
+    "  Column AN = Quarter of refund (e.g. Q1, Q2, Q3, Q4)\n" +
+    "  Column AO = Year of refund (e.g. 2024, 2025)\n" +
+    "  When asked about refunds in a specific quarter/year (e.g. Q4 2025), filter by BOTH columns together.\n" +
+    "  Quarter breakdown:\n" + (function(){
+      var qc={};
+      sheetData.forEach(function(r){ var q=get(r,"Quarter")||get(r,"AN")||""; if(q) qc[q]=(qc[q]||0)+1; });
+      var out = Object.entries(qc).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+      return out || "  (Quarter column will be populated from live sheet)";
+    })() + "\n" +
+    "  Year breakdown:\n" + (function(){
+      var yc={};
+      sheetData.forEach(function(r){ var y=get(r,"Year")||get(r,"AO")||""; if(y) yc[y]=(yc[y]||0)+1; });
+      var out = Object.entries(yc).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
+      return out || "  (Year column will be populated from live sheet)";
+    })() + "\n\n" +
     "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.\n\nIMPORTANT: When asked for any chart or graph, respond ONLY with this format (no other text):\nCHART|type|Title|Label1,Label2,Label3|10,20,30\nwhere type is bar or pie. For all other questions respond in plain text.";
 }
 
