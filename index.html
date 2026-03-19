@@ -183,11 +183,7 @@ function parseEnrollCSV(text) {
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
   // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
-  var total = sheetData.filter(function(r){
-    var name = get(r,"Name");
-    var hub = get(r,"Hubspot id");
-    return (name.length > 1) || (hub.length > 3);
-  }).length;
+  var total = sheetData.length; // parseCSV already filters to valid rows only
   var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
   var credited = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount Credited")); }, 0);
 
@@ -577,11 +573,7 @@ function setLoading(on) {
 // STAT CARDS
 function updateStats() {
   // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
-  var total = sheetData.filter(function(r){
-    var name = get(r,"Name");
-    var hub = get(r,"Hubspot id");
-    return (name.length > 1) || (hub.length > 3);
-  }).length;
+  var total = sheetData.length; // parseCSV already filters to valid rows only
   var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
   var inTrial = countVal("Refund request received in Trial Window","yes");
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
