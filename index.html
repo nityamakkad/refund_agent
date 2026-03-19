@@ -232,6 +232,13 @@ function buildPrompt() {
     "  Pathway (3): Data Science-1 | Career-1 | Data Engineering-1\n" +
     "  Boost-up (1): Mentoring-1\n" +
     "\n" +
+    "REFUND UPFRONT PAYMENT TYPE (Column G: Upfront Payment Yes/No — use for ALL refund upfront questions):\n" +
+    "  IMPORTANT: For questions like how many upfront refunded / non-upfront refunded / flexipay refunded,\n" +
+    "  ALWAYS use Column G (Upfront Payment Yes/No) from the Refunds Q4 tab — NOT the enrollment tab.\n" +
+    "  • Upfront refunds (Yes + Upfront): " + (sheetData.filter(function(r){ var v=get(r,"Upfront Payment (Yes / No)").toLowerCase(); return v==="yes"||v==="upfront"; }).length) + " learners\n" +
+    "  • Non-Upfront refunds (No): " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="no"; }).length) + " learners\n" +
+    "  • Flexipay refunds: " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length) + " learners\n" +
+    "  Column G values: Yes=Upfront, No=Non-Upfront, Flexipay=Flexipay, Upfront=Upfront\n\n" +
     "KEY HIERARCHY RULES:\n" +
     "  • EdgeUp questions = ONLY Edge-up LU + Edge-up SU categories (NOT Switch-up, NOT Agent-up)\n" +
     "  • Edge-up LU: AI(27) + Interview Prep(23) = 50 total refunds\n" +
@@ -340,6 +347,66 @@ function buildPrompt() {
     "  This is when the learner first paid their deposit to secure enrollment.\n\n" +
     "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
     (sheetData.length > 10 ? "...and " + (sheetData.length - 10) + " more records\n" : "") +
+    "\nALL REFUND TAB COLUMNS — COMPLETE REFERENCE:\n" +
+    "\n" +
+    "IDENTITY COLUMNS:\n" +
+    "  Col A (Hubspot id): Learner HubSpot ID — used when name is PI-encrypted\n" +
+    "  Col B (Email id): Learner email | Col C (Count): Programs enrolled (1/2/3) | Col D (Name): Real name or v1: encrypted\n" +
+    "  Col P (New/Alumni): New=139, Alumni=10 | Col Q (Region): All US\n" +
+    "\n" +
+    "DATE COLUMNS:\n" +
+    "  Col E (Date of Receipt): Date learner paid/enrolled\n" +
+    "  Col F (Cohort Start Date): When their cohort started\n" +
+    "  Col T (Request Date): Date refund was internally requested\n" +
+    "  Col W (Refund Date): Date refund was issued to learner\n" +
+    "  Col AI (Refund Request Date by learner): Date learner first asked for refund\n" +
+    "  Col AV (Bank Account Debit Date): Date bank was debited\n" +
+    "\n" +
+    "FINANCIAL COLUMNS:\n" +
+    "  Col J (Amount Credited): Original amount paid. Total: $894,921\n" +
+    "  Col S (Net Revenue): Net revenue recognized. Total: $1,059,097\n" +
+    "  Col U (Amount refunded): Amount refunded. Total: $790,289\n" +
+    "  Col AP (Credit Note Amount): Credit note value | Col AW (Bank Account Debit Amount): Bank debit\n" +
+    "\n" +
+    "PAYMENT COLUMNS:\n" +
+    "  Col G (Upfront Payment Yes/No): Yes/Upfront=123 Upfront | No=23 Non-Upfront | Flexipay=3\n" +
+    "  Col H (Flexipay Yes/No): Yes=10, No=139 | Col I (COMMIT400 Yes/No): Special program flag\n" +
+    "  Col K (Payment Id): Transaction ID\n" +
+    "  Col L (Payment Mode): KLARNA-47|STRIPE_CARD-31|AFFIRM-23|STRIPE_ACH-14|0%APR FLEXIPAY-13|CLIMBCREDIT-12|PAYPAL-9\n" +
+    "  Col V (Refund Mode): Mode used to process refund\n" +
+    "  Col AZ (Upfront Status): Upfront-60|Non upfront-7|Flexipay-6|Blank-55\n" +
+    "  NOTE: For upfront/non-upfront/flexipay refund questions → use Col G (Upfront Payment Yes/No)\n" +
+    "\n" +
+    "PROGRAM COLUMNS:\n" +
+    "  Col M (BU): AI=85|Interview Prep=64 | Col N (Category): Switch-up/Edge-up LU/Edge-up SU etc.\n" +
+    "  Col O (Course): Flagship ML/TPM/EM/Backend etc. | Col R (Invoice No.): All start with IKUS\n" +
+    "\n" +
+    "REFUND DETAILS:\n" +
+    "  Col X (Refund Id): Transaction ID | Col Y (Sale Retained/Dropped): All Dropped\n" +
+    "  Col AB (Reason for Refund): Detailed reason text from ops\n" +
+    "  Col AC (Deposit also refunded): Yes=99|No=49\n" +
+    "  Col AD (Refund Category): Financial Issues/Personal Reason/Content issue etc.\n" +
+    "  Col AE (FD Ticket No): Freshdesk ticket | Col AM (Credit Note No.): Credit note reference\n" +
+    "  Col AF (Trial Window): Yes=113(76%)|No=36(24%)\n" +
+    "  Col AG (Approved by): Sreejit=116|Gaurav=22|Justin=6|Harsh=2\n" +
+    "  Col AH (Eligible per policy): Yes=108|No=41 exceptions approved\n" +
+    "  Col AQ (Refund after dispute): Yes=4\n" +
+    "\n" +
+    "TIME DIFFERENCE COLUMNS:\n" +
+    "  Col AJ (Receipt Date - Refund Date): Days between payment and refund: 0-7days=37|8-21days=48|>21days=63\n" +
+    "  Col AK (Receipt-Refund Bucket): 0-7|8 to 21|>21\n" +
+    "  Col AR (Refund Date - Receipt Date): Days from receipt to refund processing\n" +
+    "  Col AS (Refund period Bucket): Period groupings | Col AT (Refund Date - Cohort Start Date): Days\n" +
+    "  Col AU (Refund Requested - Cohort Start Week): Week number\n" +
+    "\n" +
+    "TEAM COLUMNS:\n" +
+    "  Col AX (PA): Program Advisor who sold | Col AY (Manager): PA manager\n" +
+    "  Col AL (Onboarding Owner): SSA who onboarded | Col BA (OB Owner): OB owner field 2\n" +
+    "  Col BB (OB Status): Onboarded=34|Incomplete OB=9|VM-4 Attempts=8|Blank=98\n" +
+    "  Col BC (LinkedIn): Learner LinkedIn URL\n" +
+    "\n" +
+    "QUARTER/YEAR: Col AN (Quarter)=Q4 all 149 | Col AO (Year)=2025 all 149\n" +
+    "\n" +
     "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
     "  This column shows how many days passed between the learner payment date and the refund date.\n" +
     "  • Within 1 week (0-7 days): " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=0 && d<=7; }).length + " learners\n" +
