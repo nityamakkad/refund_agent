@@ -81,7 +81,10 @@ function parseCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
-    if ((obj['Invoice No.'] || '').indexOf('IKUS') === 0) rows.push(obj);
+    var hasIKUS = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
+    var hasEmailAndAmount = (obj['Email id'] || '').indexOf('@') !== -1 && (obj['Amount refunded'] || '').length > 0;
+    var hasNameAndAmount = (obj['Name'] || '').length > 1 && !obj['Name'].startsWith('v1:') && (obj['Amount refunded'] || '').length > 0;
+    if (hasIKUS || hasEmailAndAmount || hasNameAndAmount) rows.push(obj);
   }
   return rows;
 }
@@ -211,7 +214,7 @@ function buildPrompt() {
     "REFUND CATEGORIES:\n" + fmt(groupBy("Refund Category")) + "\n\n" +
     "BY COURSE:\n" + fmt(groupBy("Course", 10)) + "\n\n" +
     "BY BU:\n" + fmt(groupBy("BU")) + "\n\n" +
-    "REFUND DATA SOURCE: All refund questions must use ONLY the Refunds Q4 tab data (sheetData). Never mix with enrollment data for refund counts.\n\n" +
+    "IMPORTANT: For ALL refund questions use refund data only, never enrollment data.\n\n" +
     "COMPLETE BU > CATEGORY > COURSE HIERARCHY (Refunds Q4 tab — verified from raw data):\n" +
     "IMPORTANT: Flagship ML is ONLY under Switch-up. It is NOT an EdgeUp course.\n\n" +
     "BU: AI (85 total refunds)\n" +
@@ -233,8 +236,7 @@ function buildPrompt() {
     "  Boost-up (1): Mentoring-1\n" +
     "\n" +
     "REFUND UPFRONT PAYMENT TYPE (Column G: Upfront Payment Yes/No — use for ALL refund upfront questions):\n" +
-    "  IMPORTANT: For questions like how many upfront refunded / non-upfront refunded / flexipay refunded,\n" +
-    "  ALWAYS use Column G (Upfront Payment Yes/No) from the Refunds Q4 tab — NOT the enrollment tab.\n" +
+    "  For upfront/non-upfront/flexipay refund questions use the Upfront Payment Yes/No field from refund data.\n" +
     "  • Upfront refunds (Yes + Upfront): " + (sheetData.filter(function(r){ var v=get(r,"Upfront Payment (Yes / No)").toLowerCase(); return v==="yes"||v==="upfront"; }).length) + " learners\n" +
     "  • Non-Upfront refunds (No): " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="no"; }).length) + " learners\n" +
     "  • Flexipay refunds: " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length) + " learners\n" +
@@ -350,62 +352,62 @@ function buildPrompt() {
     "\nALL REFUND TAB COLUMNS — COMPLETE REFERENCE:\n" +
     "\n" +
     "IDENTITY COLUMNS:\n" +
-    "  Col A (Hubspot id): Learner HubSpot ID — used when name is PI-encrypted\n" +
-    "  Col B (Email id): Learner email | Col C (Count): Programs enrolled (1/2/3) | Col D (Name): Real name or v1: encrypted\n" +
-    "  Col P (New/Alumni): New=139, Alumni=10 | Col Q (Region): All US\n" +
+    "  (Hubspot id): Learner HubSpot ID — used when name is PI-encrypted\n" +
+    "  (Email id): Learner email | (Count): Programs enrolled (1/2/3) | (Name): Real name or v1: encrypted\n" +
+    "  (New/Alumni): New=139, Alumni=10 | (Region): All US\n" +
     "\n" +
     "DATE COLUMNS:\n" +
-    "  Col E (Date of Receipt): Date learner paid/enrolled\n" +
-    "  Col F (Cohort Start Date): When their cohort started\n" +
-    "  Col T (Request Date): Date refund was internally requested\n" +
-    "  Col W (Refund Date): Date refund was issued to learner\n" +
-    "  Col AI (Refund Request Date by learner): Date learner first asked for refund\n" +
-    "  Col AV (Bank Account Debit Date): Date bank was debited\n" +
+    "  (Date of Receipt): Date learner paid/enrolled\n" +
+    "  (Cohort Start Date): When their cohort started\n" +
+    "  (Request Date): Date refund was internally requested\n" +
+    "  (Refund Date): Date refund was issued to learner\n" +
+    "  (Refund Request Date by learner): Date learner first asked for refund\n" +
+    "  (Bank Account Debit Date): Date bank was debited\n" +
     "\n" +
     "FINANCIAL COLUMNS:\n" +
-    "  Col J (Amount Credited): Original amount paid. Total: $894,921\n" +
-    "  Col S (Net Revenue): Net revenue recognized. Total: $1,059,097\n" +
-    "  Col U (Amount refunded): Amount refunded. Total: $790,289\n" +
-    "  Col AP (Credit Note Amount): Credit note value | Col AW (Bank Account Debit Amount): Bank debit\n" +
+    "  (Amount Credited): Original amount paid. Total: $894,921\n" +
+    "  (Net Revenue): Net revenue recognized. Total: $1,059,097\n" +
+    "  (Amount refunded): Amount refunded. Total: $790,289\n" +
+    "  (Credit Note Amount): Credit note value | (Bank Account Debit Amount): Bank debit\n" +
     "\n" +
     "PAYMENT COLUMNS:\n" +
-    "  Col G (Upfront Payment Yes/No): Yes/Upfront=123 Upfront | No=23 Non-Upfront | Flexipay=3\n" +
-    "  Col H (Flexipay Yes/No): Yes=10, No=139 | Col I (COMMIT400 Yes/No): Special program flag\n" +
-    "  Col K (Payment Id): Transaction ID\n" +
-    "  Col L (Payment Mode): KLARNA-47|STRIPE_CARD-31|AFFIRM-23|STRIPE_ACH-14|0%APR FLEXIPAY-13|CLIMBCREDIT-12|PAYPAL-9\n" +
-    "  Col V (Refund Mode): Mode used to process refund\n" +
-    "  Col AZ (Upfront Status): Upfront-60|Non upfront-7|Flexipay-6|Blank-55\n" +
-    "  NOTE: For upfront/non-upfront/flexipay refund questions → use Col G (Upfront Payment Yes/No)\n" +
+    "  (Upfront Payment Yes/No): Yes/Upfront=123 Upfront | No=23 Non-Upfront | Flexipay=3\n" +
+    "  (Flexipay Yes/No): Yes=10, No=139 | (COMMIT400 Yes/No): Special program flag\n" +
+    "  (Payment Id): Transaction ID\n" +
+    "  (Payment Mode): KLARNA-47|STRIPE_CARD-31|AFFIRM-23|STRIPE_ACH-14|0%APR FLEXIPAY-13|CLIMBCREDIT-12|PAYPAL-9\n" +
+    "  (Refund Mode): Mode used to process refund\n" +
+    "  (Upfront Status): Upfront-60|Non upfront-7|Flexipay-6|Blank-55\n" +
+    "  NOTE: For upfront/non-upfront/flexipay refund questions use the Upfront Payment Yes/No field\n" +
     "\n" +
     "PROGRAM COLUMNS:\n" +
-    "  Col M (BU): AI=85|Interview Prep=64 | Col N (Category): Switch-up/Edge-up LU/Edge-up SU etc.\n" +
-    "  Col O (Course): Flagship ML/TPM/EM/Backend etc. | Col R (Invoice No.): All start with IKUS\n" +
+    "  (BU): AI=85|Interview Prep=64 | (Category): Switch-up/Edge-up LU/Edge-up SU etc.\n" +
+    "  (Course): Flagship ML/TPM/EM/Backend etc. | (Invoice No.): All start with IKUS\n" +
     "\n" +
     "REFUND DETAILS:\n" +
-    "  Col X (Refund Id): Transaction ID | Col Y (Sale Retained/Dropped): All Dropped\n" +
-    "  Col AB (Reason for Refund): Detailed reason text from ops\n" +
-    "  Col AC (Deposit also refunded): Yes=99|No=49\n" +
-    "  Col AD (Refund Category): Financial Issues/Personal Reason/Content issue etc.\n" +
-    "  Col AE (FD Ticket No): Freshdesk ticket | Col AM (Credit Note No.): Credit note reference\n" +
-    "  Col AF (Trial Window): Yes=113(76%)|No=36(24%)\n" +
-    "  Col AG (Approved by): Sreejit=116|Gaurav=22|Justin=6|Harsh=2\n" +
-    "  Col AH (Eligible per policy): Yes=108|No=41 exceptions approved\n" +
-    "  Col AQ (Refund after dispute): Yes=4\n" +
+    "  (Refund Id): Transaction ID | (Sale Retained/Dropped): All Dropped\n" +
+    "  (Reason for Refund): Detailed reason text from ops\n" +
+    "  (Deposit also refunded): Yes=99|No=49\n" +
+    "  (Refund Category): Financial Issues/Personal Reason/Content issue etc.\n" +
+    "  (FD Ticket No): Freshdesk ticket | (Credit Note No.): Credit note reference\n" +
+    "  (Trial Window): Yes=113(76%)|No=36(24%)\n" +
+    "  (Approved by): Sreejit=116|Gaurav=22|Justin=6|Harsh=2\n" +
+    "  (Eligible per policy): Yes=108|No=41 exceptions approved\n" +
+    "  (Refund after dispute): Yes=4\n" +
     "\n" +
     "TIME DIFFERENCE COLUMNS:\n" +
-    "  Col AJ (Receipt Date - Refund Date): Days between payment and refund: 0-7days=37|8-21days=48|>21days=63\n" +
-    "  Col AK (Receipt-Refund Bucket): 0-7|8 to 21|>21\n" +
-    "  Col AR (Refund Date - Receipt Date): Days from receipt to refund processing\n" +
-    "  Col AS (Refund period Bucket): Period groupings | Col AT (Refund Date - Cohort Start Date): Days\n" +
-    "  Col AU (Refund Requested - Cohort Start Week): Week number\n" +
+    "  (Receipt Date - Refund Date): Days between payment and refund: 0-7days=37|8-21days=48|>21days=63\n" +
+    "  (Receipt-Refund Bucket): 0-7|8 to 21|>21\n" +
+    "  (Refund Date - Receipt Date): Days from receipt to refund processing\n" +
+    "  (Refund period Bucket): Period groupings | (Refund Date - Cohort Start Date): Days\n" +
+    "  (Refund Requested - Cohort Start Week): Week number\n" +
     "\n" +
     "TEAM COLUMNS:\n" +
-    "  Col AX (PA): Program Advisor who sold | Col AY (Manager): PA manager\n" +
-    "  Col AL (Onboarding Owner): SSA who onboarded | Col BA (OB Owner): OB owner field 2\n" +
-    "  Col BB (OB Status): Onboarded=34|Incomplete OB=9|VM-4 Attempts=8|Blank=98\n" +
-    "  Col BC (LinkedIn): Learner LinkedIn URL\n" +
+    "  (PA): Program Advisor who sold | (Manager): PA manager\n" +
+    "  (Onboarding Owner): SSA who onboarded | (OB Owner): OB owner field 2\n" +
+    "  (OB Status): Onboarded=34|Incomplete OB=9|VM-4 Attempts=8|Blank=98\n" +
+    "  (LinkedIn): Learner LinkedIn URL\n" +
     "\n" +
-    "QUARTER/YEAR: Col AN (Quarter)=Q4 all 149 | Col AO (Year)=2025 all 149\n" +
+    "QUARTER/YEAR: Quarter and Year columns allow filtering by time period. Always count by both together.\n" +
     "\n" +
     "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
     "  This column shows how many days passed between the learner payment date and the refund date.\n" +
@@ -414,21 +416,16 @@ function buildPrompt() {
     "  • Over 21 days: " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>21; }).length + " learners\n" +
     "  Column AK (Receipt Date - Refund Date Bucket) groups these as: 0-7, 8 to 21, >21\n" +
     "  Bucket counts — 0-7: " + countVal("Receipt Date - Refund Date Bucket","0-7") + " | 8 to 21: " + countVal("Receipt Date - Refund Date Bucket","8 to 21") + " | >21: " + countVal("Receipt Date - Refund Date Bucket",">21") + "\n\n" +
-    "QUARTER AND YEAR COLUMNS (AN and AO — newly added by the team):\n" +
-    "  Column AN = Quarter of refund (e.g. Q1, Q2, Q3, Q4)\n" +
-    "  Column AO = Year of refund (e.g. 2024, 2025)\n" +
-    "  When asked about refunds in a specific quarter/year (e.g. Q4 2025), filter by BOTH columns together.\n" +
-    "  Quarter breakdown:\n" + (function(){
-      var qc={};
-      sheetData.forEach(function(r){ var q=get(r,"Quarter")||get(r,"AN")||""; if(q) qc[q]=(qc[q]||0)+1; });
-      var out = Object.entries(qc).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-      return out || "  (Quarter column will be populated from live sheet)";
-    })() + "\n" +
-    "  Year breakdown:\n" + (function(){
-      var yc={};
-      sheetData.forEach(function(r){ var y=get(r,"Year")||get(r,"AO")||""; if(y) yc[y]=(yc[y]||0)+1; });
-      var out = Object.entries(yc).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-      return out || "  (Year column will be populated from live sheet)";
+    "QUARTER AND YEAR BREAKDOWN (live from sheet):\n" +
+    "  When asked about a specific quarter/year filter by BOTH Quarter and Year fields together.\n" +
+    (function(){
+      var qy={};
+      sheetData.forEach(function(r){
+        var q=get(r,"Quarter"); var y=get(r,"Year");
+        if(q && y){ var k=q+" "+y; qy[k]=(qy[k]||0)+1; }
+        else if(q){ qy[q]=(qy[q]||0)+1; }
+      });
+      return Object.entries(qy).sort().map(function(e){ return "  • "+e[0]+": "+e[1]+" refunds"; }).join("\n");
     })() + "\n\n" +
     "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.\n\nIMPORTANT: When asked for any chart or graph, respond ONLY with this format (no other text):\nCHART|type|Title|Label1,Label2,Label3|10,20,30\nwhere type is bar or pie. For all other questions respond in plain text.";
 }
