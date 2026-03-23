@@ -81,11 +81,15 @@ function parseCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
+    // Count row if it has Quarter+Year AND any identifier (IKUS invoice, email, name, or hubspot)
+    var hasQuarter = (obj['Quarter'] || '').length > 0;
+    var hasYear = (obj['Year'] || '').length > 0;
     var hasIKUS = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
-    var hasEmailAndAmount = (obj['Email id'] || '').indexOf('@') !== -1 && (obj['Amount refunded'] || '').length > 0;
-    var hasNameAndAmount = (obj['Name'] || '').length > 1 && !obj['Name'].startsWith('v1:') && (obj['Amount refunded'] || '').length > 0;
-    var hasNameAndCategory = (obj['Name'] || '').length > 1 && !obj['Name'].startsWith('v1:') && (obj['Email id'] || '').indexOf('@') !== -1;
-    if (hasIKUS || hasEmailAndAmount || hasNameAndAmount || hasNameAndCategory) rows.push(obj);
+    var hasEmail = (obj['Email id'] || '').indexOf('@') !== -1;
+    var hasName = (obj['Name'] || '').length > 1 && !(obj['Name'] || '').startsWith('v1:');
+    var hasHubspot = (obj['Hubspot ID'] || obj['Hubspot id'] || '').length > 3;
+    var hasIdentifier = hasIKUS || hasEmail || hasName || hasHubspot;
+    if ((hasQuarter || hasYear) && hasIdentifier) rows.push(obj);
   }
   return rows;
 }
@@ -194,237 +198,102 @@ function buildPrompt() {
 
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; });
   var flexDetails = flex.map(function(r) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot id");
+    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
     return "  • " + name + " | Credited: $" + get(r,"Amount Credited") + " | Refunded: $" + get(r,"Amount refunded") + " | Window: " + get(r,"Refund period Bucket") + " | Category: " + get(r,"Refund Category") + " | Course: " + get(r,"Course");
   }).join("\n");
 
   var sampleRecords = sheetData.slice(0,10).map(function(r) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + get(r,"Hubspot id");
+    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
     return name + " | " + get(r,"Course") + " | $" + get(r,"Amount refunded") + " | " + get(r,"Refund Category") + " | " + get(r,"BU") + " | PA:" + get(r,"PA") + " | Manager:" + get(r,"Manager");
   }).join("\n");
 
-  return "You are an expert EdTech Data Analyst AI for an EdTech company. You have LIVE data from TWO tabs of a Google Sheet: (1) Enrollment data with " + enrollData.length + " enrollments and (2) Refund data with " + total + " refunds — both for Q4 2025. Answer every question with exact numbers. Be precise, concise, and use bullet points or tables when helpful.\n\n" +
-    "DATASET OVERVIEW:\n" +
-    "Total Records: " + total + " | All sales: Dropped\n" +
-    "Total Amount Refunded: $" + refunded.toLocaleString() + "\n" +
-    "Total Originally Credited: $" + credited.toLocaleString() + "\n\n" +
-    "REFUND CATEGORIES:\n" + fmt(groupBy("Refund Category")) + "\n\n" +
-    "BY COURSE:\n" + fmt(groupBy("Course", 10)) + "\n\n" +
-    "BY BU:\n" + fmt(groupBy("BU")) + "\n\n" +
-    "IMPORTANT: For ALL refund questions use refund data only, never enrollment data.\n\n" +
-    "COMPLETE BU > CATEGORY > COURSE HIERARCHY (Refunds Q4 tab — verified from raw data):\n" +
-    "IMPORTANT: Flagship ML is ONLY under Switch-up. It is NOT an EdgeUp course.\n\n" +
-    "BU: AI (85 total refunds)\n" +
-    "  Switch-up (31): Flagship ML-27 | Project-up-2 | Machine Learning-2\n" +
-    "  Agent-up (13): Applied Agentic AI-10 | Agentic AI Pathway-2 | Agentic AI Architecture-1\n" +
-    "  Edge-up LU (27): Backend-6 | TPM-6 | EM-4 | Product Management-3 | Test Engineering-3 | Fullstack-2 | Data Analyst-1 | AWS Cloud-1 | Security Engineering-1\n" +
-    "  Edge-up SU (6): Backend-2 | TPM-1 | Product Management-1 | EM-1 | Test Engineering-1\n" +
-    "  Agent-up LU (3): TPM-2 | Fullstack-1\n" +
-    "  Agent-up SU (1): EM-1\n" +
-    "  Step-up (4): Machine Learning-3 | Advanced ML-1\n" +
-    "\n" +
-    "BU: Interview Prep (64 total refunds)\n" +
-    "  Edge-up LU (23): EM-7 | TPM-5 | Data Science-2 | Product Management-2 | Machine Learning-1 | Backend-1 | Test Engineering-1 | Fullstack-1 | Data Analyst-1 | SRE-1 | Data Engineering-1\n" +
-    "  Level-up (21): Fullstack-3 | Data Analyst-3 | Test Engineering-3 | Growth Product Manager-2 | Machine Learning-2 | AWS Cloud-2 | Embedded System-2 | Security Engineering-1 | EM-1 | Data Science-1 | Data Engineering-1\n" +
-    "  Edge-up SU (5): Backend-2 | Test Engineering-1 | Embedded Systems-1 | Fullstack-1\n" +
-    "  Step-up (9): TPM-4 | Embedded Systems-1 | EM-1 | Product Management-1 | Machine Learning-1 | SRE-1\n" +
-    "  Move-up LU (2): EM-1 | Data Analyst-1\n" +
-    "  Pathway (3): Data Science-1 | Career-1 | Data Engineering-1\n" +
-    "  Boost-up (1): Mentoring-1\n" +
-    "\n" +
-    "REFUND UPFRONT PAYMENT TYPE (Column G: Upfront Payment Yes/No — use for ALL refund upfront questions):\n" +
-    "  For upfront/non-upfront/flexipay refund questions use the Upfront Payment Yes/No field from refund data.\n" +
-    "  • Upfront refunds (Yes + Upfront): " + (sheetData.filter(function(r){ var v=get(r,"Upfront Payment (Yes / No)").toLowerCase(); return v==="yes"||v==="upfront"; }).length) + " learners\n" +
-    "  • Non-Upfront refunds (No): " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="no"; }).length) + " learners\n" +
-    "  • Flexipay refunds: " + (sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length) + " learners\n" +
-    "  Column G values: Yes=Upfront, No=Non-Upfront, Flexipay=Flexipay, Upfront=Upfront\n\n" +
-    "KEY HIERARCHY RULES:\n" +
-    "  • EdgeUp questions = ONLY Edge-up LU + Edge-up SU categories (NOT Switch-up, NOT Agent-up)\n" +
-    "  • Edge-up LU: AI(27) + Interview Prep(23) = 50 total refunds\n" +
-    "  • Edge-up SU: AI(6) + Interview Prep(5) = 11 total refunds\n" +
-    "  • EdgeUp combined (LU+SU) = 61 refunds. Top course: EM with 12 (4+1+7+1), TPM with 12 (6+1+5)\n" +
-    "  • Switch-up courses: Flagship ML(27), Project-up(2), Machine Learning(2) — NOT EdgeUp\n" +
-    "  • When asked about a specific course, sum it across ALL categories and BUs\n" +
-    "  • BU = AI or Interview Prep | Category = program type | Course = specific program\n\n" +
-    "BY PAYMENT MODE:\n" + fmt(groupBy("Payment Mode")) + "\n\n" +
-    "PROGRAM CATEGORY:\n" + fmt(groupBy("Category", 8)) + "\n\n" +
-    "TRIAL WINDOW:\n" +
-    "  • In Trial Window: " + countVal("Refund request received in Trial Window","yes") + "\n" +
-    "  • Outside Trial Window: " + countVal("Refund request received in Trial Window","no") + "\n\n" +
-    "POLICY ELIGIBILITY:\n" +
-    "  • Eligible: " + countVal("Eligible as per refund policy","yes") + "\n" +
-    "  • Not Eligible (exceptions): " + countVal("Eligible as per refund policy","no") + "\n\n" +
-    "NEW vs ALUMNI:\n" +
-    "  • New: " + countVal("New / Alumni","new") + " | Alumni: " + countVal("New / Alumni","alumni") + "\n\n" +
-    "DEPOSIT REFUND STATUS (column: Deposit also refunded):\n" +
-    "  IMPORTANT: This is completely separate from Flexipay. Every learner pays a deposit upfront when enrolling.\n" +
-    "  When a refund is processed, sometimes the deposit is also refunded (Yes) and sometimes it is retained (No).\n" +
-    "  • Deposit ALSO refunded (Yes): " + countVal("Deposit also refunded","yes") + " learners\n" +
-    "  • Deposit NOT refunded / retained (No): " + countVal("Deposit also refunded","no") + " learners\n" +
-    "  This has nothing to do with Flexipay installment payments. Flexipay = payment mode. Deposit = enrollment deposit.\n\n" +
-    "ONBOARDING STATUS:\n" + fmt(groupBy("OB Status", 6)) + "\n\n" +
-    "TOP PROGRAM ADVISORS:\n" + fmt(groupBy("PA", 8)) + "\n\n" +
-    "TOP MANAGERS:\n" + fmt(groupBy("Manager", 8)) + "\n\n" +
-    "FLEXIPAY LEARNERS (" + flex.length + " total — pay in monthly installments, Amount Credited = one installment only):\n" + flexDetails + "\n\n" +
-    "PI ENCRYPTION NOTE: Some learners show only HubSpot IDs. Encrypted name fields start with v1: — both formats are valid.\n\n" +
-    "ENROLLMENT DATA (Tab: Enrollments):\n" +
-    "Total Enrollments Q4 2025: " + enrollData.length + "\n" +
-    "All " + enrollData.length + " enrollment rows have at least one identifier (Email/HS ID, Name, or Candidate ID).\n\n" +
-    "REFUND RATE:\n" +
-    "  • Total Enrollments: " + enrollData.length + "\n" +
-    "  • Total Refunds: " + total + "\n" +
-    "  • Refund Rate: " + (enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1) : "N/A") + "%\n\n" +
-    "PAYMENT COLUMNS — THERE ARE 4, EACH MEANS SOMETHING DIFFERENT:\n" +
-    "\n" +
-    "1. Column J = Status (Initial payment status when learner FIRST joined):\n" +
-    "   This shows how the learner paid at the time of enrollment.\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Initial Payment Type"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "   • "+e[0]+": "+e[1]; }).join("\n");
-    })() + "\n\n" +
-    "2. Column K = payment_status (Backend/system technical status — not for manager queries):\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["System Payment Status"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "   • "+e[0]+": "+e[1]; }).join("\n");
-    })() + "\n\n" +
-    "3. Column L = Live Status (LIVE current status of each learner — use for refund/dropout queries):\n" +
-    "   Fully Paid = learner has completed all payments: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Fully Paid"; }).length + "\n" +
-    "   Flexipay_has_time_to_pay = still paying in installments: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Flexipay_has_time_to_pay"; }).length + "\n" +
-    "   Refunded = learner was refunded in Q4: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Refunded"; }).length + "\n" +
-    "   Pre Q4 Refund = refunded before Q4: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Pre Q4 Refund"; }).length + "\n" +
-    "   Dropped Out: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Dropped Out"; }).length + "\n" +
-    "   PA Mis-Sell: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="PA Mis-Sell"; }).length + "\n" +
-    "   Dispute Lost - Pre Q4 Lead: " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Dispute Lost - Pre Q4 Lead"; }).length + "\n" +
-    "   Other statuses (Invalid, Proactive Refund, Potential Error, Not to be Counted etc): remaining\n\n" +
-    "4. Column S = Payment Category (MANAGER PREFERRED VIEW — use this for Upfront/Non-Upfront/Flexipay questions):\n" +
-    "   Upfront = paid full amount upfront: " + enrollData.filter(function(r){ return (r["Payment Category"]||"").trim()==="Upfront"; }).length + "\n" +
-    "   Non Upfront = paid in installments (not flexipay): " + enrollData.filter(function(r){ return (r["Payment Category"]||"").trim()==="Non Upfront"; }).length + "\n" +
-    "   Flexipay = on 0% APR flexipay plan: " + enrollData.filter(function(r){ return (r["Payment Category"]||"").trim()==="Flexipay"; }).length + "\n" +
-    "   Pre Q4 Refund: " + enrollData.filter(function(r){ return (r["Payment Category"]||"").trim()==="Pre Q4 Refund"; }).length + "\n" +
-    "   Other (Dispute Lost, PA Mis-Sell, PE, Not to be Counted): remaining\n\n" +
-    "IMPORTANT RULES FOR ANSWERING:\n" +
-    "   • 'How many upfront/non-upfront/flexipay?' → ALWAYS use Column S (Payment Category)\n" +
-    "   • 'How many refunded/dropped/dispute?' → use Column L (Live Status)\n" +
-    "   • 'How many fully paid?' → Column L Fully Paid = " + enrollData.filter(function(r){ return (r["Live Status"]||"").trim()==="Fully Paid"; }).length + "\n" +
-    "   • Column J and K are system fields — only use if specifically asked\n" +
-    "   NOTE: The manager may see different numbers in the sheet if they apply filters.\n" +
-    "   Always state which column you used when answering payment questions.\n\n" +
-    "ENROLLMENT BY PROGRAM TYPE:\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Program Type"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-    })() + "\n\n" +
-    "ENROLLMENT PAYMENT MODE:\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Payment Mode"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).slice(0,8).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-    })() + "\n\n" +
-    "ONBOARDING STATUS (Enrollment):\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["OB STATUS"]||"").trim()||"Blank/Unknown"; c[v]=(c[v]||0)+1; });
-      var blankCount = enrollData.filter(function(r){ return !(r["OB STATUS"]||"").trim(); }).length;
-      var out = Object.entries(c).sort(function(a,b){return b[1]-a[1];}).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-      if(blankCount>0) out += "\n  Note: "+blankCount+" rows have blank OB STATUS — all have valid Email/HS ID identifiers";
-      return out;
-    })() + "\n\n" +
-    "TOP SSAs BY ENROLLMENT (Current SSA):\n" + (function(){
-      var c={};
-      enrollData.forEach(function(r){ var v=(r["Current SSA"]||"").trim(); if(v) c[v]=(c[v]||0)+1; });
-      return Object.entries(c).sort(function(a,b){return b[1]-a[1];}).slice(0,10).map(function(e){ return "  • "+e[0]+": "+e[1]; }).join("\n");
-    })() + "\n\n" +
-    "EMPTY FIELDS NOTE: Some fields are blank but all rows have at least Email/HS ID as identifier. Key blank counts: Candidate ID, Name, HS ID, Time Zone, Program Name, Current Cohort, OB STATUS, Original SSA — all have valid Email/HS ID even when blank.\n\n" +
-    "QUARTER & YEAR (Enrollment Tab):\n" + (function(){
-      var qc={}, yc={};
-      enrollData.forEach(function(r){
-        var q=(r["Quarter"]||"").trim(); if(q) qc[q]=(qc[q]||0)+1;
-        var y=(r["Year"]||"").trim(); if(y) yc[y]=(yc[y]||0)+1;
-      });
-      return "  Quarters: "+Object.entries(qc).map(function(e){return e[0]+":"+e[1];}).join(", ")+"\n"+
-             "  Years: "+Object.entries(yc).map(function(e){return e[0]+":"+e[1];}).join(", ");
-    })() + "\n\n" +
-    "DEPOSIT PAID DATE: All " + enrollData.length + " enrollments have a Deposit Paid Date (format YYYY-MM-DD).\n" +
-    "  This is when the learner first paid their deposit to secure enrollment.\n\n" +
-    "SAMPLE RECORDS (for individual lookups):\n" + sampleRecords + "\n" +
-    (sheetData.length > 10 ? "...and " + (sheetData.length - 10) + " more records\n" : "") +
-    "\nALL REFUND TAB COLUMNS — COMPLETE REFERENCE:\n" +
-    "\n" +
-    "IDENTITY COLUMNS:\n" +
-    "  (Hubspot id): Learner HubSpot ID — used when name is PI-encrypted\n" +
-    "  (Email id): Learner email | (Count): Programs enrolled (1/2/3) | (Name): Real name or v1: encrypted\n" +
-    "  (New/Alumni): New=139, Alumni=10 | (Region): All US\n" +
-    "\n" +
-    "DATE COLUMNS:\n" +
-    "  (Date of Receipt): Date learner paid/enrolled\n" +
-    "  (Cohort Start Date): When their cohort started\n" +
-    "  (Request Date): Date refund was internally requested\n" +
-    "  (Refund Date): Date refund was issued to learner\n" +
-    "  (Refund Request Date by learner): Date learner first asked for refund\n" +
-    "  (Bank Account Debit Date): Date bank was debited\n" +
-    "\n" +
-    "FINANCIAL COLUMNS:\n" +
-    "  (Amount Credited): Original amount paid. Total: $894,921\n" +
-    "  (Net Revenue): Net revenue recognized. Total: $1,059,097\n" +
-    "  (Amount refunded): Amount refunded. Total: $790,289\n" +
-    "  (Credit Note Amount): Credit note value | (Bank Account Debit Amount): Bank debit\n" +
-    "\n" +
-    "PAYMENT COLUMNS:\n" +
-    "  (Upfront Payment Yes/No): Yes/Upfront=123 Upfront | No=23 Non-Upfront | Flexipay=3\n" +
-    "  (Flexipay Yes/No): Yes=10, No=139 | (COMMIT400 Yes/No): Special program flag\n" +
-    "  (Payment Id): Transaction ID\n" +
-    "  (Payment Mode): KLARNA-47|STRIPE_CARD-31|AFFIRM-23|STRIPE_ACH-14|0%APR FLEXIPAY-13|CLIMBCREDIT-12|PAYPAL-9\n" +
-    "  (Refund Mode): Mode used to process refund\n" +
-    "  (Upfront Status): Upfront-60|Non upfront-7|Flexipay-6|Blank-55\n" +
-    "  NOTE: For upfront/non-upfront/flexipay refund questions use the Upfront Payment Yes/No field\n" +
-    "\n" +
-    "PROGRAM COLUMNS:\n" +
-    "  (BU): AI=85|Interview Prep=64 | (Category): Switch-up/Edge-up LU/Edge-up SU etc.\n" +
-    "  (Course): Flagship ML/TPM/EM/Backend etc. | (Invoice No.): All start with IKUS\n" +
-    "\n" +
-    "REFUND DETAILS:\n" +
-    "  (Refund Id): Transaction ID | (Sale Retained/Dropped): All Dropped\n" +
-    "  (Reason for Refund): Detailed reason text from ops\n" +
-    "  (Deposit also refunded): Yes=99|No=49\n" +
-    "  (Refund Category): Financial Issues/Personal Reason/Content issue etc.\n" +
-    "  (FD Ticket No): Freshdesk ticket | (Credit Note No.): Credit note reference\n" +
-    "  (Trial Window): Yes=113(76%)|No=36(24%)\n" +
-    "  (Approved by): Sreejit=116|Gaurav=22|Justin=6|Harsh=2\n" +
-    "  (Eligible per policy): Yes=108|No=41 exceptions approved\n" +
-    "  (Refund after dispute): Yes=4\n" +
-    "\n" +
-    "TIME DIFFERENCE COLUMNS:\n" +
-    "  (Receipt Date - Refund Date): Days between payment and refund: 0-7days=37|8-21days=48|>21days=63\n" +
-    "  (Receipt-Refund Bucket): 0-7|8 to 21|>21\n" +
-    "  (Refund Date - Receipt Date): Days from receipt to refund processing\n" +
-    "  (Refund period Bucket): Period groupings | (Refund Date - Cohort Start Date): Days\n" +
-    "  (Refund Requested - Cohort Start Week): Week number\n" +
-    "\n" +
-    "TEAM COLUMNS:\n" +
-    "  (PA): Program Advisor who sold | (Manager): PA manager\n" +
-    "  (Onboarding Owner): SSA who onboarded | (OB Owner): OB owner field 2\n" +
-    "  (OB Status): Onboarded=34|Incomplete OB=9|VM-4 Attempts=8|Blank=98\n" +
-    "  (LinkedIn): Learner LinkedIn URL\n" +
-    "\n" +
-    "QUARTER/YEAR: Quarter and Year columns allow filtering by time period. Always count by both together.\n" +
-    "\n" +
-    "\nREFUND DAYS ANALYSIS (Column AJ: Receipt Date - Refund Date):\n" +
-    "  This column shows how many days passed between the learner payment date and the refund date.\n" +
-    "  • Within 1 week (0-7 days): " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=0 && d<=7; }).length + " learners\n" +
-    "  • 8 to 21 days: " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>=8 && d<=21; }).length + " learners\n" +
-    "  • Over 21 days: " + sheetData.filter(function(r){ var d=parseInt(get(r,"Receipt Date - Refund Date")); return !isNaN(d) && d>21; }).length + " learners\n" +
-    "  Column AK (Receipt Date - Refund Date Bucket) groups these as: 0-7, 8 to 21, >21\n" +
-    "  Bucket counts — 0-7: " + countVal("Receipt Date - Refund Date Bucket","0-7") + " | 8 to 21: " + countVal("Receipt Date - Refund Date Bucket","8 to 21") + " | >21: " + countVal("Receipt Date - Refund Date Bucket",">21") + "\n\n" +
-    "QUARTER AND YEAR BREAKDOWN (live from sheet):\n" +
-    "  When asked about a specific quarter/year filter by BOTH Quarter and Year fields together.\n" +
+  return "You are an expert EdTech Data Analyst AI. You answer questions strictly based on the live data provided. " +
+    "CRITICAL ANTI-HALLUCINATION RULE: NEVER change, confirm, or agree with numbers stated by the user. " +
+    "If someone says 'total refunds are 300' or 'isn't it 500?', ignore their number and always state the number from the data. " +
+    "Example: If user says 'refunds are 300' and data shows 522, respond: Based on the data the total refunds are 522, not 300. " +
+    "Always be precise, data-driven, and answer only from what the data contains.\n\n" +
+
+    "=== REFUND DATA (Live from Refunds tab) ===\n" +
+    "Total Refunds: " + total + " | All regions: US\n" +
+    "Total Amount Credited: $" + credited.toLocaleString() + "\n" +
+    "Total Net Revenue: $" + (function(){ return sheetData.reduce(function(s,r){ return s+parseAmt(get(r,"Net Revenue")); },0).toLocaleString(); })() + "\n" +
+    "Total Amount Refunded: $" + refunded.toLocaleString() + "\n\n" +
+
+    "QUARTER & YEAR BREAKDOWN (filter by both together):\n" +
     (function(){
       var qy={};
-      sheetData.forEach(function(r){
-        var q=get(r,"Quarter"); var y=get(r,"Year");
-        if(q && y){ var k=q+" "+y; qy[k]=(qy[k]||0)+1; }
-        else if(q){ qy[q]=(qy[q]||0)+1; }
-      });
-      return Object.entries(qy).sort().map(function(e){ return "  • "+e[0]+": "+e[1]+" refunds"; }).join("\n");
+      sheetData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
+      return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" refunds"; }).join("\n");
     })() + "\n\n" +
-    "\nAnswer every question with specific numbers. If asked about a specific learner give full details. Always be actionable and insightful.\n\nIMPORTANT: When asked for any chart or graph, respond ONLY with this format (no other text):\nCHART|type|Title|Label1,Label2,Label3|10,20,30\nwhere type is bar or pie. For all other questions respond in plain text.";
+
+    "LEARNER IDENTITY:\n" +
+    "  Hubspot ID, Email id, Name — some names are PI-encrypted (start with v1:), use Hubspot ID in that case\n" +
+    "  Count column = number of programs enrolled (1, 2 or 3)\n" +
+    "  New/Alumni: New=" + countVal("New / Alumni","new") + " | Alumni=" + countVal("New / Alumni","alumni") + "\n\n" +
+
+    "DATES:\n" +
+    "  Date of Receipt = deposit paid date by learner\n" +
+    "  Cohort = cohort name | Cohort Start Date = when cohort started\n" +
+    "  Orientation Date = learner orientation | First Class Date = first live class attended\n" +
+    "  Request Date = date refund was internally processed\n" +
+    "  Refund Date = date refund was issued to learner\n" +
+    "  Refund Request Date by learner = date learner first asked for refund\n\n" +
+
+    "UPFRONT PAYMENT TYPE (for ALL refund upfront questions use this field):\n" +
+    "  Upfront Payment Yes/No: Yes(Upfront)=" + sheetData.filter(function(r){ var v=get(r,"Upfront Payment (Yes / No)").toLowerCase(); return v==="yes"||v==="upfront"; }).length + " | No(Non-Upfront)=" + countVal("Upfront Payment (Yes / No)","no") + " | Flexipay=" + sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length + "\n" +
+    "  Flexipay (Yes/No): Yes=" + countVal("Flexipay (Yes / No)","yes") + " | No=" + countVal("Flexipay (Yes / No)","no") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Flexipay (Yes / No)"); }).length + "\n\n" +
+
+    "PAYMENT:\n" +
+    "  Amount Credited = what learner paid | Payment Mode breakdown:\n" +
+    "  " + fmt(groupBy("Payment Mode")) + "\n" +
+    "  Refund Mode breakdown:\n" +
+    "  " + fmt(groupBy("Refund Mode")) + "\n\n" +
+
+    "BU > CATEGORY > COURSE HIERARCHY:\n" +
+    "  IMPORTANT: Flagship ML is ONLY under Switch-up. It is NOT an EdgeUp course.\n" +
+    "  BU: AI=" + countVal("BU","AI") + " | Interview Prep=" + countVal("BU","Interview Prep") + "\n" +
+    "  BU: AI (299 refunds)\n" +
+    "    Switch-up(31): Flagship ML-27|Project-up-2|Machine Learning-2\n" +
+    "    Agent-up(13): Applied Agentic AI-10|Agentic AI Pathway-2|Agentic AI Architecture-1\n" +
+    "    Edge-up LU(27): Backend-6|TPM-6|EM-4|Product Management-3|Test Engineering-3|Fullstack-2|Data Analyst-1|AWS Cloud-1|Security Engineering-1\n" +
+    "    Edge-up SU(6): Backend-2|TPM-1|Product Management-1|EM-1|Test Engineering-1\n" +
+    "    Agent-up LU(3): TPM-2|Fullstack-1 | Agent-up SU(1): EM-1 | Step-up(4): Machine Learning-3|Advanced ML-1\n" +
+    "  BU: Interview Prep (223 refunds)\n" +
+    "    Edge-up LU(23): EM-7|TPM-5|Data Science-2|Product Management-2|others\n" +
+    "    Level-up(21): Fullstack-3|Data Analyst-3|Test Engineering-3|others\n" +
+    "    Edge-up SU(5): Backend-2|Test Engineering-1|Embedded Systems-1|Fullstack-1\n" +
+    "    Step-up(9): TPM-4|others | Move-up LU(2)|Pathway(3)|Boost-up(1)\n" +
+    "  EdgeUp = Edge-up LU + Edge-up SU combined. Top EdgeUp courses: EM=12, TPM=12\n\n" +
+
+    "REFUND DETAILS:\n" +
+    "  Sale Retained/Dropped (Sales team view): Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Sale Retained / Dropped"); }).length + "\n" +
+    "  Student Retained/Dropped For Retention (Ops team view): Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Student Retained / Dropped - For Retention"); }).length + "\n" +
+    "  NOTE: Sale Retained/Dropped = Sales team perspective. Student Retained/Dropped = Ops/Operations team perspective. Both are different.\n\n" +
+
+    "REFUND CATEGORIES (top reasons):\n" + fmt(groupBy("Refund Category",15)) + "\n\n" +
+
+    "REFUND STAGE (at what point refund was done):\n" +
+    fmt(groupBy("Refund Stage",12)) + "\n" +
+    "  Blank=" + sheetData.filter(function(r){ return !get(r,"Refund Stage"); }).length + "\n\n" +
+
+    "OTHER REFUND FLAGS:\n" +
+    "  Deposit also refunded: Yes=" + countVal("Deposit also refunded","yes") + " | No=" + countVal("Deposit also refunded","no") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Deposit also refunded"); }).length + "\n" +
+    "  In Trial Window: Yes=" + countVal("Refund request received in Trial Window","yes") + " | No=" + countVal("Refund request received in Trial Window","no") + "\n" +
+    "  Eligible per policy: Yes=" + countVal("Eligible as per refund policy","yes") + " | No=" + countVal("Eligible as per refund policy","no") + "\n" +
+    "  Approved by: " + fmt(groupBy("Approved by",6)) + "\n\n" +
+
+    "DURATION (Receipt to Refund Request):\n" +
+    "  Duration Bucket: 0 to 7=" + countVal("Duration Bucket","0 to 7") + " | 8 to 21=" + countVal("Duration Bucket","8 to 21") + " | >21=" + countVal("Duration Bucket",">21") + "\n\n" +
+
+    "TEAM:\n" +
+    "  PA (Program Advisor): " + fmt(groupBy("PA",8)) + "\n" +
+    "  Manager: " + fmt(groupBy("Manager",8)) + "\n" +
+    "  OB Status: Onboarded=" + countVal("OB Status","Onboarded") + " | Incomplete OB=" + countVal("OB Status","Incomplete OB") + " | VM-4 Attempts=" + countVal("OB Status","VM - 4 Attempts") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"OB Status"); }).length + "\n\n" +
+
+    "BLANK VALUE POLICY: When reporting counts by category always mention blank/unknown count separately if any exist.\n\n" +
+
+    "SAMPLE RECORDS:\n" + sampleRecords + "\n" +
+    (sheetData.length > 10 ? "...and " + (sheetData.length - 10) + " more records\n" : "")
 }
 
 // SEND TO GEMINI
@@ -589,9 +458,9 @@ function updateStats() {
     {l:"Total Enrollments", v:enrollData.length||"—", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
     {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
-    {l:"Upfront Enrollments", v:upfront||"—", c:"#34d399", i:"✅"},
-    {l:"Non-Upfront Enrollments", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
-    {l:"Flexipay Enrollments", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
+    {l:"Upfront", v:upfront||"—", c:"#34d399", i:"✅"},
+    {l:"Non-Upfront", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
+    {l:"Flexipay", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
   ];
 
   var bar = document.getElementById("statsBar");
@@ -712,7 +581,7 @@ function renderFlexipay() {
   if (!tbody) return;
 
   tbody.innerHTML = flex.map(function(r, i) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot id");
+    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
     var c = parseAmt(get(r,"Amount Credited"));
     var rf = parseAmt(get(r,"Amount refunded"));
     tc += c; tr += rf;
@@ -797,7 +666,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds 2025</p>
+      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds · Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -822,6 +691,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <span class="pill" onclick="sendMessage('How many learners are fully paid vs refunded?')">Payment status</span>
     <span class="pill" onclick="sendMessage('Which program type has most enrollments?')">Program analysis</span>
     <span class="pill" onclick="sendMessage('What is the onboarding success rate?')">OB success rate</span>
+    <span class="pill" onclick="sendMessage('Which SSA has most enrollments?')">SSA breakdown</span>
     <span class="pill" onclick="sendMessage('What are the top 5 refund reasons with counts?')">Top refund reasons</span>
     <span class="pill" onclick="sendMessage('Analyse all PA Mis-sell cases in detail')">PA Mis-sell analysis</span>
     <span class="pill" onclick="sendMessage('Show me all Flexipay learner details')">Flexipay details</span>
