@@ -449,13 +449,13 @@ function updateStats() {
   var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
   var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
 
-  var refundRate = enrollData.length > 0 ? (total/enrollData.length*100).toFixed(1)+"%" : "N/A";
-  // Payment Category column S = manager's preferred view
+  var totalEnroll = enrollData.length;
   var upfront = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="upfront"; }).length;
   var nonUpfront = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="non upfront"; }).length;
-  var flexipayEnroll = enrollData.filter(function(r){ var s=(r["Payment Category"]||"").trim().toLowerCase(); return s==="flexipay" || s.indexOf("flexipay")!==-1; }).length;
+  var flexipayEnroll = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="flexipay"; }).length;
+  var refundRate = totalEnroll > 0 ? (total/totalEnroll*100).toFixed(1)+"%" : "N/A";
   var stats = [
-    {l:"Total Enrollments", v:enrollData.length||"—", c:"#1a56db", i:"🎓"},
+    {l:"Total Enrollments", v:totalEnroll||"—", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
     {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
     {l:"Upfront Enrollments", v:upfront||"—", c:"#34d399", i:"✅"},
@@ -804,4 +804,92 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 </div>
 
 </body>
-</html>
+</html"ENROLLMENT DATA (Full Year 2025 — 4 quarters):\n" +
+    "Total Enrollments: " + enrollData.length + " across Q1+Q2+Q3+Q4 2025\n\n" +
+
+    "ENROLLMENT BY QUARTER+YEAR (dynamic from live sheet):\n" +
+    (function(){
+      var qy={};
+      enrollData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
+      return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" enrollments"; }).join("\n");
+    })() + "\n\n" +
+
+    "COLUMN REFERENCE (Enrollment Tab):\n" +
+    "  Program Type: Category of learner program (EdgeUp/Level Up/New ML/Step Up/Agentic SkillUp/Advanced ML/AgentUp etc.)\n" +
+    "  Candidate ID: Internal candidate identifier\n" +
+    "  Name: Learner full name\n" +
+    "  HS ID: HubSpot ID\n" +
+    "  Email / HS ID: Email address or HubSpot ID\n" +
+    "  Time Zone: Learner timezone (mostly US timezones, 100 blank)\n" +
+    "  Program Name: Full program name (specific course title)\n" +
+    "  Current Cohort: Cohort learner is currently assigned to\n" +
+    "  Deposit Paid Date: Date learner first paid deposit to secure enrollment\n" +
+    "  Quarter + Year: Quarter and year of enrollment\n\n" +
+
+    "PAYMENT COLUMNS (Enrollment Tab — 3 separate columns):\n" +
+    "  Initial Payment Type: Payment status when learner first joined (has_paid_in_full/Flexipay_has_time_to_pay/has_time_to_pay etc.)\n" +
+    "  System Payment Status: Technical system status (ENROLLED_WITH_NO_DUES/ENROLLED/FULL_PAYMENT_PAID etc.)\n" +
+    "  Live Status: Current live status of learner — most up to date:\n" +
+    "    Fully Paid=" + enrollData.filter(function(r){return get(r,"Live Status")==="Fully Paid";}).length +
+    " | Flexipay_has_time_to_pay=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay_has_time_to_pay";}).length +
+    " | Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Refunded";}).length +
+    " | Flexipay Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay Refunded";}).length +
+    " | Dropped Out=" + enrollData.filter(function(r){return get(r,"Live Status")==="Dropped Out";}).length +
+    " | Blank=" + enrollData.filter(function(r){return !get(r,"Live Status");}).length + "\n" +
+    "  Payment Category: Manager-preferred grouping — Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Upfront";}).length +
+    " | Non Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Non Upfront";}).length +
+    " | Flexipay=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Flexipay";}).length + "\n" +
+    "  Payment Mode: STRIPE_CARD/AFFIRM_VIA_STRIPE/KLARNA/0_PERCENT_APR_FLEXIPAY/STRIPE_MANUAL_PAYMENT/PAYPAL/ACH_TRANSFER/CLIMBCREDIT etc. | Blank=169\n\n" +
+
+    "PROGRAM TYPE BREAKDOWN BY QUARTER:\n" +
+    "  Q1 2025 (1037): Level Up:250|EdgeUp:212|Step Up:145|New ML:121|Advanced ML:74\n" +
+    "  Q2 2025 (1215): EdgeUp:231|Level Up:195|New ML:154|Step Up:132|Agentic SkillUp:118\n" +
+    "  Q3 2025 (1430): EdgeUp:418|New ML:200|Level Up:168|Agentic SkillUp:147|Step Up:136\n" +
+    "  Q4 2025 (1019): EdgeUp:436|New ML:142|Level Up:121|Agentic SkillUp:105|Step Up:76\n\n" +
+
+    "PAYMENT CATEGORY BY QUARTER:\n" +
+    "  Q1 2025: Upfront=861|Non Upfront=63|Flexipay=111\n" +
+    "  Q2 2025: Upfront=1067|Non Upfront=108|Flexipay=40\n" +
+    "  Q3 2025: Upfront=1236|Non Upfront=68|Flexipay=126\n" +
+    "  Q4 2025: Upfront=787|Non Upfront=59|Flexipay=124\n\n" +
+
+    "SSA (Student Success Advisor):\n" +
+    "  Current SSA: person currently handling the learner\n" +
+    "  Original SSA: SSA who first onboarded the learner\n" +
+    "  Top Current SSAs: Sanjana:327|Muskan:322|Arush:317|Archi:307|Anjali:283|Anshuman:277|Nishtha:276|Sharon:268\n" +
+    "  Top Original SSAs: Nishtha:333|Arush:317|Muskan:307|Shelly:297|Anshuman:292|Anjali:276|Samarth:276\n\n" +
+
+    "OB STATUS BY QUARTER:\n" +
+    "  Q1 2025: Onboarded=792|VM-4 Attempts=154|Blank=4\n" +
+    "  Q2 2025: Onboarded=944|VM-4 Attempts=205|Incomplete OB=23\n" +
+    "  Q3 2025: Onboarded=1132|VM-4 Attempts=157|Incomplete OB=48|Blank=42\n" +
+    "  Q4 2025: Onboarded=835|VM-4 Attempts=95|Incomplete OB=30|Blank=59\n" +
+    "  Overall OB Success Rate: 3703/4701 = 78.8%\n\n" +
+
+    "OVERLAPPING COLUMNS RULE:\n" +
+    "  Payment Mode, Payment Category, Deposit/Receipt Date exist in BOTH tabs.\n" +
+    "  ALWAYS ask the manager to clarify which tab they mean before answering.\n" +
+    "  Example: 'Do you mean payment mode from enrollments or refunds data?'\n\n" +
+
+    "REFUND COUNT CLARIFICATION:\n" +
+    "  Refunds tab = 522 refunds (source of truth for refund analysis)\n" +
+    "  Enrollment tab Live Status = 340 marked Refunded (includes Flexipay Refunded=29)\n" +
+    "  Difference exists because some refunds span quarters or have different tracking.\n" +
+    "  When asked 'how many refunds': mention both numbers and explain the difference.\n\n" +
+
+    "BLANK VALUE RULE: Always mention blank counts separately when reporting by category.\n\n" +"DATES — ALL COLUMNS EXPLAINED:\n" +
+    "  Date of Receipt: Date learner paid deposit (all 522 filled)\n" +
+    "  Cohort: Cohort name/label | Cohort Start Date: When cohort started (502 filled, 20 blank)\n" +
+    "  Orientation Date: Date of learner orientation — blank means not attended or not recorded\n" +
+    "  First Class Date: Date of learner first live class — blank means not attended or not recorded\n" +
+    "  Refund Request Date by learner: Date LEARNER first asked OPS for refund (all 522 filled)\n" +
+    "  Request Date: Date OPS raised refund to FINANCE team (all 522 filled) — different from above\n" +
+    "  Refund Date: Date refund was actually issued to learner (520 filled, 2 blank)\n\n" +
+    "TWO REQUEST DATES — ALWAYS CLARIFY:\n" +
+    "  If asked when refund was requested — ask: do you mean when the learner asked (Refund Request Date by learner) or when ops forwarded to finance (Request Date)?\n" +
+    "  Avg gap Learner→Ops-to-Finance: 13 days. Same day=5|1-3 days=87|4-7 days=153|8-14 days=145|15+ days=126\n" +
+    "  Avg gap Receipt→Learner Request: 37.6 days. ≤0=13|1-7=145|8-21=158|22+=204\n\n" +
+    "ORIENTATION & FIRST CLASS DATE:\n" +
+    "  Use to answer: how many requested refund before/after orientation or before/after first class?\n" +
+    "  Compare Refund Request Date by learner vs Orientation Date vs First Class Date.\n" +
+    "  Blank orientation/first class date = learner did not attend or data not yet recorded.\n\n" +>
