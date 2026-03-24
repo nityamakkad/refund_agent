@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Refund Intelligence Agent</title>
+<title>Refund & Enrollment Intelligence Agent</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
 <style>
@@ -15,18 +15,23 @@
   .tabs{display:flex;gap:6px;flex-wrap:wrap}
   .tab{padding:7px 15px;border-radius:8px;border:none;cursor:pointer;font-size:12px;font-weight:600;transition:all .2s;background:#e2e8f0;color:#4a5568}
   .tab.active{background:linear-gradient(135deg,#1a56db,#1e429f);color:#fff}
+  .filter-bar{display:flex;gap:8px;padding:10px 24px;background:#dde3ea;border-bottom:1px solid #cbd5e0;align-items:center;flex-wrap:wrap}
+  .filter-bar label{font-size:11px;font-weight:600;color:#4a5568}
+  .filter-bar select{padding:5px 10px;border-radius:7px;border:1px solid #cbd5e0;background:#fff;font-size:12px;font-weight:600;color:#1a202c;cursor:pointer}
+  .filter-bar select:focus{outline:none;border-color:#1a56db}
+  .filter-active-badge{font-size:11px;font-weight:700;color:#1a56db;background:#dbeafe;padding:3px 10px;border-radius:12px;border:1px solid #bfdbfe}
   .stats{display:flex;gap:10px;padding:12px 24px;overflow-x:auto;background:#e8edf2;border-bottom:1px solid #cbd5e0}
   .stat{background:#ffffff;border-radius:10px;padding:10px 16px;min-width:110px;flex-shrink:0}
-  .panel{display:none;padding:12px 20px;height:calc(100vh - 170px);overflow-y:auto;flex-direction:column;gap:10px}
+  .panel{display:none;padding:12px 20px;height:calc(100vh - 210px);overflow-y:auto;flex-direction:column;gap:10px}
   .panel.active{display:flex}
   .card{background:#ffffff;border:1px solid #d1d9e0;border-radius:10px;padding:10px 14px;box-shadow:0 1px 6px rgba(0,0,0,0.07)}
   .card h3{font-size:12px;color:#1e40af;font-weight:600;margin-bottom:8px}
   .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
-  .msg-user{background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word}
+  .msg-user{background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word;color:#fff}
   .msg-ai{background:#ffffff;border:1px solid #cbd5e0;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap;word-break:break-word}
   .msg-label{font-size:10px;color:#1a56db;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
   .input-row{display:flex;gap:10px}
-  .chat-input{flex:1;background:#ffffff;border:1px solid #cbd5e0;color:#1a202c;border-radius:10px;padding:11px 16px;color:#1a202c;font-size:13px}
+  .chat-input{flex:1;background:#ffffff;border:1px solid #cbd5e0;color:#1a202c;border-radius:10px;padding:11px 16px;font-size:13px}
   .chat-input:focus{outline:none;border-color:#1a56db}
   .send-btn{background:linear-gradient(135deg,#1a56db,#1e429f);border:none;border-radius:10px;padding:11px 20px;color:#fff;cursor:pointer;font-weight:700;font-size:13px}
   .send-btn:disabled{opacity:.5;cursor:not-allowed}
@@ -38,7 +43,7 @@
   .full{grid-column:1/-1}
   table{width:100%;border-collapse:collapse;font-size:12px}
   th{padding:11px 14px;text-align:left;color:#1a56db;font-weight:600;font-size:11px;background:#e8edf2;border-bottom:2px solid #cbd5e0}
-  td{padding:10px 14px;border-bottom:1px solid #1a1a2e;color:#1a202c}
+  td{padding:10px 14px;border-bottom:1px solid #e2e8f0;color:#1a202c}
   tr:nth-child(even) td{background:#eef1f5}
   .badge{border-radius:6px;padding:2px 8px;font-size:10px;font-weight:600}
   .dots{display:none;align-items:center;gap:6px;padding:4px 8px}
@@ -52,18 +57,44 @@
 <body>
 
 <script>
-// API key is stored securely in Netlify environment variables — never in code
-const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
+const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
 const ENROLL_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
 
-let sheetData   = [];   // refund data
-let enrollData  = [];   // enrollment data
-let messages    = [];
-let charts      = {};
+var sheetData  = [];   // full refund data (all quarters)
+var enrollData = [];   // full enrollment data (all quarters)
+var messages   = [];
+var charts     = {};
 
-// CSV PARSER - handles multi-line quoted fields correctly
+// Active filter state
+var activeFilterQ = "all";  // e.g. "Q1", "Q2", "Q3", "Q4", "all"
+var activeFilterY = "2025"; // e.g. "2025", "all"
+
+// Returns filtered refund data based on active quarter/year filter
+function filteredRefunds() {
+  if (activeFilterQ === "all" && activeFilterY === "all") return sheetData;
+  return sheetData.filter(function(r) {
+    var q = get(r, "Quarter");
+    var y = get(r, "Year");
+    var qMatch = activeFilterQ === "all" || q === activeFilterQ;
+    var yMatch = activeFilterY === "all" || y === activeFilterY;
+    return qMatch && yMatch;
+  });
+}
+
+// Returns filtered enrollment data based on active quarter/year filter
+function filteredEnrollments() {
+  if (activeFilterQ === "all" && activeFilterY === "all") return enrollData;
+  return enrollData.filter(function(r) {
+    var q = get(r, "Quarter");
+    var y = get(r, "Year");
+    var qMatch = activeFilterQ === "all" || q === activeFilterQ;
+    var yMatch = activeFilterY === "all" || y === activeFilterY;
+    return qMatch && yMatch;
+  });
+}
+
+// CSV PARSER — handles multi-line quoted fields
 function parseCSV(text) {
-  // Rejoin newlines inside quoted cells before splitting
   var cleaned = [];
   var inQ = false;
   for (var i = 0; i < text.length; i++) {
@@ -81,15 +112,38 @@ function parseCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
-    // Count row if it has Quarter+Year AND any identifier (IKUS invoice, email, name, or hubspot)
+    // A valid refund row must have Quarter OR Year AND at least one identifier
     var hasQuarter = (obj['Quarter'] || '').length > 0;
-    var hasYear = (obj['Year'] || '').length > 0;
-    var hasIKUS = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
-    var hasEmail = (obj['Email id'] || '').indexOf('@') !== -1;
-    var hasName = (obj['Name'] || '').length > 1 && !(obj['Name'] || '').startsWith('v1:');
-    var hasHubspot = (obj['Hubspot ID'] || obj['Hubspot id'] || '').length > 3;
-    var hasIdentifier = hasIKUS || hasEmail || hasName || hasHubspot;
+    var hasYear    = (obj['Year'] || '').length > 0;
+    var hasEmail   = (obj['Email id'] || '').indexOf('@') !== -1;
+    var hasName    = (obj['Name'] || '').length > 1;
+    var hasHubspot = (obj['Hubspot ID'] || obj['Hubspot id'] || '').length > 2;
+    var hasInvoice = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
+    var hasIdentifier = hasEmail || hasName || hasHubspot || hasInvoice;
     if ((hasQuarter || hasYear) && hasIdentifier) rows.push(obj);
+  }
+  return rows;
+}
+
+function parseEnrollCSV(text) {
+  var cleaned = [];
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') { inQ = !inQ; cleaned.push(ch); }
+    else if ((ch === '\n' || ch === '\r') && inQ) { cleaned.push(' '); }
+    else { cleaned.push(ch); }
+  }
+  var lines = cleaned.join('').split('\n');
+  var headers = splitCSVLine(lines[0]);
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = splitCSVLine(line);
+    var obj = {};
+    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
+    if (obj['Email / HS ID'] || obj['Name'] || obj['Candidate ID']) rows.push(obj);
   }
   return rows;
 }
@@ -109,24 +163,25 @@ function splitCSVLine(line) {
 // HELPERS
 function get(r, k) { return (r[k] || "").trim(); }
 function parseAmt(s) { return parseFloat((s||"").replace(/,/g,"")) || 0; }
-function groupBy(field, limit) {
+
+function groupByField(data, field, limit) {
   limit = limit || 12;
   var c = {};
-  sheetData.forEach(function(r) {
+  data.forEach(function(r) {
     var v = (r[field] || "").trim();
-    if (!v || v.length > 40 || v.indexOf("http") !== -1 || v.indexOf(",") !== -1) return;
+    if (!v || v.length > 50 || v.indexOf("http") !== -1) return;
     c[v] = (c[v] || 0) + 1;
   });
   var entries = Object.entries(c).sort(function(a,b){ return b[1]-a[1]; });
-  entries = entries.filter(function(e){
-    if (e[1] >= 2) return true;
-    return /^[A-Z0-9%_ ]+$/.test(e[0]);
-  });
   return entries.slice(0, limit);
 }
-function countVal(field, val) {
-  return sheetData.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
+
+function groupBy(field, limit) { return groupByField(sheetData, field, limit); }
+
+function countValIn(data, field, val) {
+  return data.filter(function(r){ return get(r,field).toLowerCase() === val.toLowerCase(); }).length;
 }
+function countVal(field, val) { return countValIn(sheetData, field, val); }
 
 // FETCH BOTH SHEETS
 async function fetchSheet() {
@@ -134,22 +189,18 @@ async function fetchSheet() {
   if (btn) btn.textContent = "Loading...";
   var t = Date.now();
   try {
-    // Fetch refund tab
     var res1 = await fetch(SHEET_CSV_URL + "&t=" + t);
     if (!res1.ok) throw new Error("Refund tab HTTP " + res1.status);
-    var text1 = await res1.text();
-    sheetData = parseCSV(text1);
+    sheetData = parseCSV(await res1.text());
 
-    // Fetch enrollment tab
     try {
       var res2 = await fetch(ENROLL_CSV_URL + "&t=" + t);
-      if (res2.ok) {
-        var text2 = await res2.text();
-        enrollData = parseEnrollCSV(text2);
-      }
+      if (res2.ok) enrollData = parseEnrollCSV(await res2.text());
     } catch(e2) { console.warn("Enrollment tab not loaded:", e2); }
 
     if (sheetData.length === 0) throw new Error("No valid refund rows found");
+
+    populateFilterDropdowns();
     updateStats();
     renderCharts();
     renderFlexipay();
@@ -161,142 +212,315 @@ async function fetchSheet() {
   if (btn) btn.textContent = "🔄 Refresh Data";
 }
 
-// ENROLLMENT CSV PARSER (simpler - no multi-line issue in enrollment data)
-function parseEnrollCSV(text) {
-  // Multiline fix - same as refund CSV parser
-  var cleaned = [];
-  var inQ = false;
-  for (var i = 0; i < text.length; i++) {
-    var ch = text[i];
-    if (ch === '"') { inQ = !inQ; cleaned.push(ch); }
-    else if ((ch === "\n" || ch === "\r") && inQ) { cleaned.push(" "); }
-    else { cleaned.push(ch); }
-  }
-  var lines = cleaned.join("").split("\n");
-  var headers = splitCSVLine(lines[0]);
-  var rows = [];
-  for (var i = 1; i < lines.length; i++) {
-    var line = lines[i].trim();
-    if (!line) continue;
-    var vals = splitCSVLine(line);
-    var obj = {};
-    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
-    if (obj["Email / HS ID"] || obj["Name"] || obj["Candidate ID"]) rows.push(obj);
-  }
-  return rows;
+// FILTER DROPDOWNS
+function populateFilterDropdowns() {
+  var quarters = {};
+  var years    = {};
+  sheetData.forEach(function(r) {
+    var q = get(r,"Quarter"); var y = get(r,"Year");
+    if (q) quarters[q] = true;
+    if (y) years[y] = true;
+  });
+  enrollData.forEach(function(r) {
+    var q = get(r,"Quarter"); var y = get(r,"Year");
+    if (q) quarters[q] = true;
+    if (y) years[y] = true;
+  });
+
+  var qSel = document.getElementById("filterQ");
+  var ySel = document.getElementById("filterY");
+  if (!qSel || !ySel) return;
+
+  var sortedQ = Object.keys(quarters).sort();
+  var sortedY = Object.keys(years).sort();
+
+  qSel.innerHTML = '<option value="all">All Quarters</option>' +
+    sortedQ.map(function(q){ return '<option value="'+q+'">'+q+'</option>'; }).join('');
+  ySel.innerHTML = '<option value="all">All Years</option>' +
+    sortedY.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
 }
+
+function applyFilter() {
+  var qSel = document.getElementById("filterQ");
+  var ySel = document.getElementById("filterY");
+  activeFilterQ = qSel ? qSel.value : "all";
+  activeFilterY = ySel ? ySel.value : "all";
+
+  var badge = document.getElementById("filterBadge");
+  if (badge) {
+    if (activeFilterQ === "all" && activeFilterY === "all") {
+      badge.style.display = "none";
+    } else {
+      var label = [];
+      if (activeFilterQ !== "all") label.push(activeFilterQ);
+      if (activeFilterY !== "all") label.push(activeFilterY);
+      badge.textContent = "Filtered: " + label.join(" ");
+      badge.style.display = "inline-block";
+    }
+  }
+
+  updateStats();
+  renderCharts();
+  renderFlexipay();
+}
+
 // BUILD SYSTEM PROMPT
 function buildPrompt() {
-  // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
-  var total = sheetData.length; // parseCSV already filters to valid rows only
+  var total    = sheetData.length;
   var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
   var credited = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount Credited")); }, 0);
+  var netRev   = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Net Revenue")); }, 0);
 
   function fmt(arr) {
     return arr.map(function(x){ return "  • " + x[0] + ": " + x[1]; }).join("\n");
   }
 
-  var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; });
-  var flexDetails = flex.map(function(r) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
-    return "  • " + name + " | Credited: $" + get(r,"Amount Credited") + " | Refunded: $" + get(r,"Amount refunded") + " | Window: " + get(r,"Refund period Bucket") + " | Category: " + get(r,"Refund Category") + " | Course: " + get(r,"Course");
-  }).join("\n");
-
-  var sampleRecords = sheetData.slice(0,10).map(function(r) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
+  var sampleRecords = sheetData.slice(0,8).map(function(r) {
+    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot:" + (get(r,"Hubspot ID")||get(r,"Hubspot id"));
     return name + " | " + get(r,"Course") + " | $" + get(r,"Amount refunded") + " | " + get(r,"Refund Category") + " | " + get(r,"BU") + " | PA:" + get(r,"PA") + " | Manager:" + get(r,"Manager");
   }).join("\n");
 
-  return "You are an expert EdTech Data Analyst AI. You answer questions strictly based on the live data provided. " +
-    "CRITICAL ANTI-HALLUCINATION RULE: NEVER change, confirm, or agree with numbers stated by the user. " +
-    "If someone says 'total refunds are 300' or 'isn't it 500?', ignore their number and always state the number from the data. " +
-    "Example: If user says 'refunds are 300' and data shows 522, respond: Based on the data the total refunds are 522, not 300. " +
-    "Always be precise, data-driven, and answer only from what the data contains.\n\n" +
+  return (
+// ─────────────────────────────────────────────
+// CORE IDENTITY & ANTI-HALLUCINATION RULES
+// ─────────────────────────────────────────────
+"You are an expert EdTech Data Analyst AI for an online education company. You answer questions STRICTLY based on the live data provided below. Never make up numbers, trends, or facts.\n\n" +
 
-    "=== REFUND DATA (Live from Refunds tab) ===\n" +
-    "Total Refunds: " + total + " | All regions: US\n" +
-    "Total Amount Credited: $" + credited.toLocaleString() + "\n" +
-    "Total Net Revenue: $" + (function(){ return sheetData.reduce(function(s,r){ return s+parseAmt(get(r,"Net Revenue")); },0).toLocaleString(); })() + "\n" +
-    "Total Amount Refunded: $" + refunded.toLocaleString() + "\n\n" +
+"CRITICAL ANTI-HALLUCINATION RULES:\n" +
+"1. NEVER agree with, confirm, or adjust to numbers stated by the user. If a manager says 'total refunds are 300' or 'isn't the count 500?', do NOT say yes or change your answer. Always state the number from the data and correct them politely.\n" +
+"   Example: If user says 'there are 300 refunds' but data shows 522, respond: 'Based on the data the total refunds are 522, not 300.'\n" +
+"2. NEVER invent reasons, trends, or insights not supported by the data columns provided.\n" +
+"3. If a question cannot be answered from the data, say so clearly.\n" +
+"4. All counts and figures you quote must come from the data summary below — not from assumptions.\n\n" +
 
-    "QUARTER & YEAR BREAKDOWN (filter by both together):\n" +
-    (function(){
-      var qy={};
-      sheetData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
-      return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" refunds"; }).join("\n");
-    })() + "\n\n" +
+"BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n\n" +
 
-    "LEARNER IDENTITY:\n" +
-    "  Hubspot ID, Email id, Name — some names are PI-encrypted (start with v1:), use Hubspot ID in that case\n" +
-    "  Count column = number of programs enrolled (1, 2 or 3)\n" +
-    "  New/Alumni: New=" + countVal("New / Alumni","new") + " | Alumni=" + countVal("New / Alumni","alumni") + "\n\n" +
+"OVERLAPPING COLUMNS RULE: The columns Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH the Refunds tab and Enrollments tab. If a question about these is genuinely ambiguous (not clearly about refunds or enrollments), ask the manager which tab they mean before answering.\n\n" +
 
-    "DATES:\n" +
-    "  Date of Receipt = deposit paid date by learner\n" +
-    "  Cohort = cohort name | Cohort Start Date = when cohort started\n" +
-    "  Orientation Date = learner orientation | First Class Date = first live class attended\n" +
-    "  Request Date = date refund was internally processed\n" +
-    "  Refund Date = date refund was issued to learner\n" +
-    "  Refund Request Date by learner = date learner first asked for refund\n\n" +
+"CHART FORMAT: If asked to show a chart, respond in this exact pipe format on one line:\n" +
+"CHART|bar|Chart Title|Label1,Label2,Label3|10,20,30\n" +
+"Use 'pie' instead of 'bar' for proportional breakdowns.\n\n" +
 
-    "UPFRONT PAYMENT TYPE (for ALL refund upfront questions use this field):\n" +
-    "  Upfront Payment Yes/No: Yes(Upfront)=" + sheetData.filter(function(r){ var v=get(r,"Upfront Payment (Yes / No)").toLowerCase(); return v==="yes"||v==="upfront"; }).length + " | No(Non-Upfront)=" + countVal("Upfront Payment (Yes / No)","no") + " | Flexipay=" + sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length + "\n" +
-    "  Flexipay (Yes/No): Yes=" + countVal("Flexipay (Yes / No)","yes") + " | No=" + countVal("Flexipay (Yes / No)","no") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Flexipay (Yes / No)"); }).length + "\n\n" +
+// ─────────────────────────────────────────────
+// REFUNDS TAB — FULL DATA SUMMARY
+// ─────────────────────────────────────────────
+"=== REFUNDS TAB (Live Data — Q1 to Q4 2025) ===\n" +
+"Total Refund Records: " + total + "\n" +
+"Total Amount Credited (paid by learners): $" + credited.toLocaleString() + "\n" +
+"Total Net Revenue: $" + netRev.toLocaleString() + "\n" +
+"Total Amount Refunded: $" + refunded.toLocaleString() + "\n\n" +
 
-    "PAYMENT:\n" +
-    "  Amount Credited = what learner paid | Payment Mode breakdown:\n" +
-    "  " + fmt(groupBy("Payment Mode")) + "\n" +
-    "  Refund Mode breakdown:\n" +
-    "  " + fmt(groupBy("Refund Mode")) + "\n\n" +
+"REFUNDS BY QUARTER & YEAR (source of truth for refund counts — use Quarter+Year together):\n" +
+(function(){
+  var qy={};
+  sheetData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
+  return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" refunds"; }).join("\n");
+})() + "\n" +
+"NOTE: Use Quarter+Year together for refund counts. Some rows may have missing email/name/Hubspot ID — always use Quarter+Year as the primary count basis. Always state the exact count from this data and do not adjust if someone gives you a different number.\n\n" +
 
-    "BU > CATEGORY > COURSE HIERARCHY:\n" +
-    "  IMPORTANT: Flagship ML is ONLY under Switch-up. It is NOT an EdgeUp course.\n" +
-    "  BU: AI=" + countVal("BU","AI") + " | Interview Prep=" + countVal("BU","Interview Prep") + "\n" +
-    "  BU: AI (299 refunds)\n" +
-    "    Switch-up(31): Flagship ML-27|Project-up-2|Machine Learning-2\n" +
-    "    Agent-up(13): Applied Agentic AI-10|Agentic AI Pathway-2|Agentic AI Architecture-1\n" +
-    "    Edge-up LU(27): Backend-6|TPM-6|EM-4|Product Management-3|Test Engineering-3|Fullstack-2|Data Analyst-1|AWS Cloud-1|Security Engineering-1\n" +
-    "    Edge-up SU(6): Backend-2|TPM-1|Product Management-1|EM-1|Test Engineering-1\n" +
-    "    Agent-up LU(3): TPM-2|Fullstack-1 | Agent-up SU(1): EM-1 | Step-up(4): Machine Learning-3|Advanced ML-1\n" +
-    "  BU: Interview Prep (223 refunds)\n" +
-    "    Edge-up LU(23): EM-7|TPM-5|Data Science-2|Product Management-2|others\n" +
-    "    Level-up(21): Fullstack-3|Data Analyst-3|Test Engineering-3|others\n" +
-    "    Edge-up SU(5): Backend-2|Test Engineering-1|Embedded Systems-1|Fullstack-1\n" +
-    "    Step-up(9): TPM-4|others | Move-up LU(2)|Pathway(3)|Boost-up(1)\n" +
-    "  EdgeUp = Edge-up LU + Edge-up SU combined. Top EdgeUp courses: EM=12, TPM=12\n\n" +
+// ─── LEARNER IDENTITY ───
+"LEARNER IDENTITY COLUMNS:\n" +
+"  Hubspot ID: Internal CRM identifier for the learner\n" +
+"  Email id: Learner's email address — some may be blank\n" +
+"  Name: Learner full name — some names are PI-encrypted (start with 'v1:'), use Hubspot ID in those cases\n" +
+"  Count: Number of programs the learner is enrolled in (1, 2, or 3)\n" +
+"  New / Alumni: New=" + countVal("New / Alumni","new") + " | Alumni=" + countVal("New / Alumni","alumni") + " | Blank=" + sheetData.filter(function(r){return !get(r,"New / Alumni");}).length + "\n\n" +
 
-    "REFUND DETAILS:\n" +
-    "  Sale Retained/Dropped (Sales team view): Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Sale Retained / Dropped"); }).length + "\n" +
-    "  Student Retained/Dropped For Retention (Ops team view): Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Student Retained / Dropped - For Retention"); }).length + "\n" +
-    "  NOTE: Sale Retained/Dropped = Sales team perspective. Student Retained/Dropped = Ops/Operations team perspective. Both are different.\n\n" +
+// ─── DATES ───
+"DATE COLUMNS — ALL EXPLAINED:\n" +
+"  Date of Receipt: Date learner paid their deposit (this is the deposit paid date — equivalent to enrollment date). All " + total + " rows filled.\n" +
+"  Cohort: Name/label of the learner's cohort\n" +
+"  Cohort Start Date: Date when the cohort officially started (most filled, some blank = not yet started or not recorded)\n" +
+"  Orientation Date: Date learner attended orientation — blank means not attended or not yet recorded\n" +
+"  First Class Date: Date of learner's first live class — blank means not attended or not yet recorded\n" +
+"  Refund Request Date by learner: Date the LEARNER first asked OPS for a refund\n" +
+"  Request Date: Date OPS forwarded the refund request to the FINANCE team — different from above\n" +
+"  Refund Date: Date refund was actually issued to the learner\n\n" +
+"TWO REQUEST DATES — ALWAYS CLARIFY: If asked 'when was the refund requested', ask whether they mean when the learner asked (Refund Request Date by learner) or when ops raised it to finance (Request Date). These are different dates.\n\n" +
 
-    "REFUND CATEGORIES (top reasons):\n" + fmt(groupBy("Refund Category",15)) + "\n\n" +
+// ─── PAYMENT TYPE ───
+"UPFRONT / NON-UPFRONT / FLEXIPAY (Refunds Tab):\n" +
+"  Column 'Upfront Payment (Yes / No)' defines payment type:\n" +
+"    Yes = Upfront learner: " + sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="yes"; }).length + "\n" +
+"    No  = Non-Upfront learner: " + countVal("Upfront Payment (Yes / No)","no") + "\n" +
+"    Flexipay = Flexipay learner: " + sheetData.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length + "\n" +
+"  Column 'Flexipay (Yes / No)' is a cross-check column:\n" +
+"    Yes=" + countVal("Flexipay (Yes / No)","yes") + " | No=" + countVal("Flexipay (Yes / No)","no") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Flexipay (Yes / No)");}).length + "\n" +
+"  Amount Credited: Total amount paid by the learner\n" +
+"  Payment Mode breakdown:\n" + fmt(groupBy("Payment Mode",10)) + "\n" +
+"  Refund Mode breakdown:\n" + fmt(groupBy("Refund Mode",10)) + "\n\n" +
 
-    "REFUND STAGE (at what point refund was done):\n" +
-    fmt(groupBy("Refund Stage",12)) + "\n" +
-    "  Blank=" + sheetData.filter(function(r){ return !get(r,"Refund Stage"); }).length + "\n\n" +
+// ─── BU / CATEGORY / COURSE ───
+"BU → CATEGORY → COURSE HIERARCHY (in that order):\n" +
+"  BU is the top level, then Category, then Course within that.\n" +
+"  BU: AI=" + countVal("BU","AI") + " | Interview Prep=" + countVal("BU","Interview Prep") + "\n" +
+"  IMPORTANT: Flagship ML is ONLY under Switch-up (AI BU). It is NOT an EdgeUp course.\n" +
+"  AI BU breakdown by Category & Course:\n" +
+"    Switch-up: Flagship ML-91, Machine Learning-43, Project-up-9 (and others)\n" +
+"    Agent-up: Applied Agentic AI-27, and others\n" +
+"    Edge-up LU, Edge-up SU, Step-up, Agent-up LU/SU also fall under AI BU\n" +
+"  Interview Prep BU breakdown by Category & Course:\n" +
+"    Level-up, Edge-up LU, Edge-up SU, Step-up, Move-up LU, Pathway, Boost-up\n" +
+"    Top courses: EM-63, TPM-58, Fullstack-28, Product Management-30, Backend-25, Data Engineering-21\n" +
+"  EdgeUp = Edge-up LU + Edge-up SU combined across both BUs.\n" +
+"  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n\n" +
 
-    "OTHER REFUND FLAGS:\n" +
-    "  Deposit also refunded: Yes=" + countVal("Deposit also refunded","yes") + " | No=" + countVal("Deposit also refunded","no") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"Deposit also refunded"); }).length + "\n" +
-    "  In Trial Window: Yes=" + countVal("Refund request received in Trial Window","yes") + " | No=" + countVal("Refund request received in Trial Window","no") + "\n" +
-    "  Eligible per policy: Yes=" + countVal("Eligible as per refund policy","yes") + " | No=" + countVal("Eligible as per refund policy","no") + "\n" +
-    "  Approved by: " + fmt(groupBy("Approved by",6)) + "\n\n" +
+// ─── NET REVENUE & REFUND AMOUNTS ───
+"FINANCIAL COLUMNS:\n" +
+"  Net Revenue: Total amount collected from learner\n" +
+"  Amount Refunded: Amount returned to the learner\n" +
+"  These two columns allow calculation of actual revenue retained.\n\n" +
 
-    "DURATION (Receipt to Refund Request):\n" +
-    "  Duration Bucket: 0 to 7=" + countVal("Duration Bucket","0 to 7") + " | 8 to 21=" + countVal("Duration Bucket","8 to 21") + " | >21=" + countVal("Duration Bucket",">21") + "\n\n" +
+// ─── SALE vs STUDENT RETAINED/DROPPED ───
+"TWO RETENTION COLUMNS — THEY ARE DIFFERENT:\n" +
+"  'Sale Retained / Dropped' = Sales team's perspective on whether the sale was retained or dropped\n" +
+"    Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Sale Retained / Dropped");}).length + "\n" +
+"  'Student Retained / Dropped - For Retention' = Ops/Operations team's perspective for retention calculation\n" +
+"    Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Student Retained / Dropped - For Retention");}).length + "\n" +
+"  Always clarify which column when someone asks about retained/dropped — sales view vs ops view are different.\n\n" +
 
-    "TEAM:\n" +
-    "  PA (Program Advisor): " + fmt(groupBy("PA",8)) + "\n" +
-    "  Manager: " + fmt(groupBy("Manager",8)) + "\n" +
-    "  OB Status: Onboarded=" + countVal("OB Status","Onboarded") + " | Incomplete OB=" + countVal("OB Status","Incomplete OB") + " | VM-4 Attempts=" + countVal("OB Status","VM - 4 Attempts") + " | Blank=" + sheetData.filter(function(r){ return !get(r,"OB Status"); }).length + "\n\n" +
+// ─── TYPE COLUMN ───
+"TYPE COLUMN:\n" +
+"  Indicates the type of refund record. Values:\n" +
+"    Refund Dropped=" + sheetData.filter(function(r){return get(r,"Type")==="Refund Dropped";}).length + " | Blank=" + sheetData.filter(function(r){return !get(r,"Type");}).length + "\n" +
+"  Blank type should be reported separately. Do not assume blank = Refund Dropped.\n\n" +
 
-    "BLANK VALUE POLICY: When reporting counts by category always mention blank/unknown count separately if any exist.\n\n" +
+// ─── REFUND REASON & CATEGORY ───
+"REASON FOR REFUND: Free-text column explaining why the learner requested a refund. Use for qualitative analysis.\n\n" +
+"REFUND CATEGORY (standardised grouping of reasons):\n" + fmt(groupBy("Refund Category",20)) + "\n\n" +
 
-    "SAMPLE RECORDS:\n" + sampleRecords + "\n" +
-    (sheetData.length > 10 ? "...and " + (sheetData.length - 10) + " more records\n" : "")
+// ─── REFUND POLICY FLAGS ───
+"REFUND POLICY FLAGS:\n" +
+"  Deposit also refunded: Yes=" + countVal("Deposit also refunded","yes") + " | No=" + countVal("Deposit also refunded","no") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Deposit also refunded");}).length + "\n" +
+"  Refund request received in Trial Window: Yes=" + countVal("Refund request received in Trial Window","yes") + " | No=" + countVal("Refund request received in Trial Window","no") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Refund request received in Trial Window");}).length + "\n" +
+"  Eligible as per refund policy: Yes=" + countVal("Eligible as per refund policy","yes") + " | No=" + countVal("Eligible as per refund policy","no") + "\n\n" +
+
+// ─── REFUND STAGE ───
+"REFUND STAGE (at what point refund was processed):\n" + fmt(groupBy("Refund Stage",15)) + "\n" +
+"  Blank=" + sheetData.filter(function(r){return !get(r,"Refund Stage");}).length + "\n\n" +
+
+// ─── DURATION ───
+"DURATION COLUMNS:\n" +
+"  'Duration between receipt date and refund request date': Exact number of days between deposit and refund request\n" +
+"  'Duration Bucket': Categorised as: 0 to 7=" + countVal("Duration Bucket","0 to 7") + " | 8 to 21=" + countVal("Duration Bucket","8 to 21") + " | >21=" + countVal("Duration Bucket",">21") + " | Blank/Error=" + sheetData.filter(function(r){var v=get(r,"Duration Bucket"); return !v||v==="#VALUE!";}).length + "\n\n" +
+
+// ─── TEAM ───
+"TEAM COLUMNS:\n" +
+"  PA (Program Advisor): Sales person who sold the program to the learner\n" + fmt(groupBy("PA",10)) + "\n" +
+"  Blank PA=" + sheetData.filter(function(r){return !get(r,"PA");}).length + "\n" +
+"  Manager: Manager of the PA\n" + fmt(groupBy("Manager",10)) + "\n" +
+"  Blank Manager=" + sheetData.filter(function(r){return !get(r,"Manager");}).length + "\n" +
+"  Approved by: Person who approved the refund\n" + fmt(groupBy("Approved by",8)) + "\n" +
+"  Blank Approved by=" + sheetData.filter(function(r){return !get(r,"Approved by");}).length + "\n" +
+"  Onboarding Owner: Person responsible for onboarding the learner\n" +
+"  FD Ticket No: Freshdesk support ticket number linked to the refund\n" +
+"  OB Status (Refunds tab): Onboarded=" + countVal("OB Status","Onboarded") + " | Incomplete OB=" + countVal("OB Status","Incomplete OB") + " | VM - 4 Attempts=" + countVal("OB Status","VM - 4 Attempts") + " | Failed OB=" + countVal("OB Status","Failed OB") + " | Blank=" + sheetData.filter(function(r){return !get(r,"OB Status");}).length + "\n\n" +
+
+"SAMPLE RECORDS (first 8 rows for reference):\n" + sampleRecords + "\n" +
+(sheetData.length > 8 ? "...and " + (sheetData.length - 8) + " more records\n\n" : "\n") +
+
+// ─────────────────────────────────────────────
+// ENROLLMENTS TAB — FULL DATA SUMMARY
+// ─────────────────────────────────────────────
+"=== ENROLLMENTS TAB (Full Year 2025 — Q1 to Q4) ===\n" +
+"Total Enrollments: " + enrollData.length + "\n\n" +
+
+"ENROLLMENTS BY QUARTER & YEAR:\n" +
+(function(){
+  var qy={};
+  enrollData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
+  return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" enrollments"; }).join("\n");
+})() + "\n\n" +
+
+"ENROLLMENT COLUMN REFERENCE:\n" +
+"  Program Type: Broad category of the learner's program — most important grouping for enrollment analysis.\n" +
+"    Top Program Types: EdgeUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="EdgeUp";}).length +
+" | Level Up=" + enrollData.filter(function(r){return get(r,"Program Type")==="Level Up";}).length +
+" | New ML=" + enrollData.filter(function(r){return get(r,"Program Type")==="New ML";}).length +
+" | Step Up=" + enrollData.filter(function(r){return get(r,"Program Type")==="Step Up";}).length +
+" | Agentic SkillUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="Agentic SkillUp";}).length +
+" | Advanced ML=" + enrollData.filter(function(r){return get(r,"Program Type")==="Advanced ML";}).length +
+" | AgentUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="AgentUp";}).length + " (and others)\n" +
+"  Candidate ID: Internal candidate identifier\n" +
+"  Name: Learner full name\n" +
+"  HS ID / Email / HS ID: HubSpot CRM ID or learner email\n" +
+"  Time Zone: Learner timezone — mostly US timezones, some blank\n" +
+"  Program Name: Full specific program title — use Program Type for analysis, Program Name is too granular\n" +
+"  Current Cohort: The cohort the learner is currently assigned to — can be asked about specifically\n" +
+"  Deposit Paid Date: Date learner first paid deposit — equivalent to enrollment date\n" +
+"  Quarter + Year: Quarter and year of enrollment\n\n" +
+
+"PAYMENT COLUMNS (Enrollments Tab — 4 separate columns, each means something different):\n" +
+"  Initial Payment Type: Payment status at time of enrollment (has_paid_in_full / Flexipay_has_time_to_pay / has_time_to_pay / ENROLLED_WITH_NO_DUES etc.)\n" +
+"  System Payment Status: Technical system status at enrollment\n" +
+"  Live Status: Most up-to-date payment/enrollment status of the learner:\n" +
+"    Fully Paid=" + enrollData.filter(function(r){return get(r,"Live Status")==="Fully Paid";}).length +
+" | Flexipay_has_time_to_pay=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay_has_time_to_pay";}).length +
+" | Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Refunded";}).length +
+" | Flexipay Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay Refunded";}).length +
+" | Dropped Out=" + enrollData.filter(function(r){return get(r,"Live Status")==="Dropped Out";}).length +
+" | Blank=" + enrollData.filter(function(r){return !get(r,"Live Status");}).length + " (and others)\n" +
+"  Payment Category: Preferred grouping used by managers:\n" +
+"    Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Upfront";}).length +
+" | Non Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Non Upfront";}).length +
+" | Flexipay=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Flexipay";}).length + " (other values exist for edge cases)\n" +
+"  Payment Mode: STRIPE_CARD=" + enrollData.filter(function(r){return get(r,"Payment Mode")==="STRIPE_CARD";}).length +
+" | AFFIRM_VIA_STRIPE=" + enrollData.filter(function(r){return get(r,"Payment Mode")==="AFFIRM_VIA_STRIPE";}).length +
+" | KLARNA=" + enrollData.filter(function(r){return get(r,"Payment Mode")==="KLARNA";}).length +
+" | 0_PERCENT_APR_FLEXIPAY=" + enrollData.filter(function(r){return get(r,"Payment Mode")==="0_PERCENT_APR_FLEXIPAY";}).length +
+" | Blank=" + enrollData.filter(function(r){return !get(r,"Payment Mode");}).length + " (and others)\n\n" +
+
+"SSA (Student Success Advisor) COLUMNS:\n" +
+"  Current SSA: The SSA currently handling the learner\n" +
+"  Original SSA: The SSA who first onboarded the learner\n" +
+"  These are two different people sometimes — current vs original.\n\n" +
+
+"OB STATUS (Enrollment Tab):\n" +
+"  Onboarded=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length +
+" | VM - 4 Attempts=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="VM - 4 Attempts";}).length +
+" | Incomplete OB=" + (enrollData.filter(function(r){return get(r,"OB STATUS")==="Incomplete OB";}).length + enrollData.filter(function(r){return get(r,"OB STATUS")==="Incomplete OB";}).length) +
+" | Blank=" + enrollData.filter(function(r){return !get(r,"OB STATUS");}).length + " (other statuses exist for callbacks, yet to connect, etc.)\n\n" +
+
+// ─────────────────────────────────────────────
+// CROSS-TAB: REFUND RATE
+// ─────────────────────────────────────────────
+"REFUND RATE CALCULATIONS (cross-tab: Refunds ÷ Enrollments per quarter):\n" +
+"  Formula: Refunds in Quarter / Enrollments in Quarter × 100\n" +
+(function(){
+  var quarters = ["Q1","Q2","Q3","Q4"];
+  var lines = [];
+  quarters.forEach(function(q){
+    var r = sheetData.filter(function(x){return get(x,"Quarter")===q&&get(x,"Year")==="2025";}).length;
+    var e = enrollData.filter(function(x){return get(x,"Quarter")===q&&get(x,"Year")==="2025";}).length;
+    var rate = e>0?(r/e*100).toFixed(1)+"%":"N/A";
+    lines.push("  "+q+" 2025: "+r+" refunds / "+e+" enrollments = "+rate);
+  });
+  var totalRate = enrollData.length>0?(sheetData.length/enrollData.length*100).toFixed(1)+"%":"N/A";
+  lines.push("  Full Year 2025: "+sheetData.length+" refunds / "+enrollData.length+" enrollments = "+totalRate);
+  return lines.join("\n");
+})() + "\n" +
+"  SOURCE OF TRUTH: Always use the Refunds tab for refund count and the Enrollments tab for enrollment count when calculating refund rate.\n" +
+"  NOTE: Live Status 'Refunded' in enrollments tab is a different tracking — do NOT use it for refund rate.\n\n" +
+
+"PROGRAM TYPE BREAKDOWN BY QUARTER (Enrollments):\n" +
+(function(){
+  var quarters = ["Q1 2025","Q2 2025","Q3 2025","Q4 2025"];
+  return quarters.map(function(qy){
+    var parts = qy.split(" ");
+    var q=parts[0], y=parts[1];
+    var rows = enrollData.filter(function(r){return get(r,"Quarter")===q&&get(r,"Year")===y;});
+    var pt={};
+    rows.forEach(function(r){var v=get(r,"Program Type"); if(v)pt[v]=(pt[v]||0)+1;});
+    var top = Object.entries(pt).sort(function(a,b){return b[1]-a[1];}).slice(0,6);
+    return "  "+qy+" ("+rows.length+"): "+top.map(function(e){return e[0]+":"+e[1];}).join("|");
+  }).join("\n");
+})() + "\n\n"
+  );
 }
 
-// SEND TO GEMINI
+// ─────────────────────────────────────────────
+// SEND TO CLAUDE
+// ─────────────────────────────────────────────
 var isBusy = false;
 async function sendMessage(prefill) {
   if (isBusy) return;
@@ -307,39 +531,36 @@ async function sendMessage(prefill) {
   isBusy = true;
   document.querySelectorAll(".pill").forEach(function(p){ p.style.pointerEvents="none"; p.style.opacity="0.5"; });
 
-  messages.push({ role: "user", parts: [{ text: text }] });
+  messages.push({ role: "user", content: text });
   renderMessages();
   setLoading(true);
 
   try {
     var requestBody = {
-      system_instruction: { parts: [{ text: buildPrompt() }] },
-      contents: messages,
-      generationConfig: { temperature: 0.5, maxOutputTokens: 600 }
+      system: buildPrompt(),
+      messages: messages
     };
 
-    // Call our secure Netlify function — API key never exposed in browser
-    var res = await fetch("/api/groq", {
+    var res = await fetch("/api/claude", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody)
     });
 
     var data = await res.json();
-    console.log("Gemini response:", data);
 
     var reply = "";
-    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
-      reply = data.candidates[0].content.parts[0].text;
+    if (data.content && data.content[0] && data.content[0].text) {
+      reply = data.content[0].text;
     } else if (data.error) {
-      reply = "API Error: " + data.error.message;
+      reply = "API Error: " + (data.error.message || JSON.stringify(data.error));
     } else {
       reply = "No response received. Check console for details.";
     }
-    messages.push({ role: "model", parts: [{ text: reply }] });
+    messages.push({ role: "assistant", content: reply });
   } catch(e) {
-    console.error("Gemini fetch error:", e);
-    messages.push({ role: "model", parts: [{ text: "Connection error: " + e.message }] });
+    console.error("Claude fetch error:", e);
+    messages.push({ role: "assistant", content: "Connection error: " + e.message });
   }
 
   setLoading(false);
@@ -352,7 +573,6 @@ async function sendMessage(prefill) {
 var inlineChartCount = 0;
 function tryParseChart(text) {
   try {
-    // Handle pipe-delimited format: CHART|type|Title|Label1,Label2|10,20
     var t = text.trim();
     if (t.indexOf("CHART|") === 0) {
       var parts = t.split("|");
@@ -366,7 +586,6 @@ function tryParseChart(text) {
         };
       }
     }
-    // Also try JSON format as fallback
     var j = t.replace(/```json|```/g,"").trim();
     if (j.charAt(0) === "{") {
       var p = JSON.parse(j);
@@ -380,12 +599,12 @@ function renderMessages() {
   var box = document.getElementById("messages");
   if (!box) return;
   if (messages.length === 0) {
-    box.innerHTML = '<div class="empty"><div style="font-size:52px;margin-bottom:12px">🤖</div><p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p></div>';
+    box.innerHTML = '<div class="empty"><div style="font-size:52px;margin-bottom:12px">🤖</div><p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund or enrollment data.<br/>I read live from your Google Sheet.</p></div>';
     return;
   }
   box.innerHTML = messages.map(function(m) {
     var isUser = m.role === "user";
-    var text = m.parts[0].text;
+    var text = typeof m.content === "string" ? m.content : (m.content[0]||{}).text || "";
     if (isUser) {
       var safe = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
       return '<div class="msg-user">' + safe + '</div>';
@@ -440,27 +659,27 @@ function setLoading(on) {
   if (dots) dots.style.display = on ? "flex" : "none";
 }
 
-// STAT CARDS
+// ─────────────────────────────────────────────
+// STAT CARDS — from Refunds tab, filter-aware
+// ─────────────────────────────────────────────
 function updateStats() {
-  // Count unique learners - rows with real name OR encrypted name (v1:) OR hubspot id
-  var total = sheetData.length; // parseCSV already filters to valid rows only
-  var refunded = sheetData.reduce(function(s,r){ return s + parseAmt(get(r,"Amount refunded")); }, 0);
-  var inTrial = countVal("Refund request received in Trial Window","yes");
-  var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; }).length;
-  var paMissell = sheetData.filter(function(r){ return get(r,"Refund Category").toLowerCase().includes("pa mis-sell"); }).length;
+  var fd = filteredRefunds();
+  var fe = filteredEnrollments();
 
-  var totalEnroll = enrollData.length;
-  var upfront = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="upfront"; }).length;
-  var nonUpfront = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="non upfront"; }).length;
-  var flexipayEnroll = enrollData.filter(function(r){ return (r["Payment Category"]||"").trim().toLowerCase()==="flexipay"; }).length;
-  var refundRate = totalEnroll > 0 ? (total/totalEnroll*100).toFixed(1)+"%" : "N/A";
+  var total      = fd.length;
+  var upfront    = fd.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="yes"; }).length;
+  var nonUpfront = fd.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="no"; }).length;
+  var flexipay   = fd.filter(function(r){ return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay"; }).length;
+  var totalEnroll = fe.length;
+  var refundRate  = totalEnroll > 0 ? (total/totalEnroll*100).toFixed(1)+"%" : "N/A";
+
   var stats = [
     {l:"Total Enrollments", v:totalEnroll||"—", c:"#1a56db", i:"🎓"},
-    {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
-    {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
-    {l:"Upfront", v:upfront||"—", c:"#34d399", i:"✅"},
-    {l:"Non-Upfront", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
-    {l:"Flexipay", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
+    {l:"Total Refunds",     v:total,             c:"#f87171", i:"↩"},
+    {l:"Refund Rate",       v:refundRate,         c:"#dc2626", i:"📉"},
+    {l:"Upfront Refunds",   v:upfront,            c:"#34d399", i:"✅"},
+    {l:"Non-Upfront Refunds",v:nonUpfront,        c:"#0ea5e9", i:"📋"},
+    {l:"Flexipay Refunds",  v:flexipay,            c:"#f59e0b", i:"💳"}
   ];
 
   var bar = document.getElementById("statsBar");
@@ -474,13 +693,17 @@ function updateStats() {
   }).join("");
 }
 
-// CHARTS
-var COLORS = ["#1a56db","#fb923c","#34d399","#f87171","#38bdf8","#1a56db","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
+// ─────────────────────────────────────────────
+// CHARTS — filter-aware
+// ─────────────────────────────────────────────
+var COLORS = ["#1a56db","#fb923c","#34d399","#f87171","#38bdf8","#a78bfa","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
+var PIE_COLORS = ["#4a6fa5","#a8c0dd","#2d5282","#d0dff0","#6b93c4","#e8eff7"];
+
 var TOPTS = {
   responsive: true,
   plugins: {
     legend: { display: false },
-    tooltip: { backgroundColor:"#e2e8f0", titleColor:"#1a56db", bodyColor:"#e2e8f0" }
+    tooltip: { backgroundColor:"#1e293b", titleColor:"#f1f5f9", bodyColor:"#cbd5e1", padding:8 }
   },
   scales: {
     x: { ticks:{ color:"#64748b", font:{size:11} }, grid:{ color:"#e2e8f0" } },
@@ -492,55 +715,38 @@ function makeBar(id, data, horizontal) {
   if (charts[id]) charts[id].destroy();
   var canvas = document.getElementById(id);
   if (!canvas) return;
-  var ctx = canvas.getContext("2d");
-  charts[id] = new Chart(ctx, {
+  charts[id] = new Chart(canvas.getContext("2d"), {
     type: "bar",
     data: {
       labels: data.map(function(d){ return d[0]; }),
       datasets: [{
         data: data.map(function(d){ return d[1]; }),
-        backgroundColor: "#4a6fa5",
-        hoverBackgroundColor: "#2d5282",
-        borderColor: "#2d5282",
-        borderWidth: 1,
-        borderRadius: 4,
-        borderSkipped: false
+        backgroundColor: "#4a6fa5", hoverBackgroundColor: "#2d5282",
+        borderRadius: 4, borderSkipped: false
       }]
     },
     options: Object.assign({}, TOPTS, {
       indexAxis: horizontal ? "y" : "x",
       maintainAspectRatio: false,
       plugins: Object.assign({}, TOPTS.plugins, {
-        tooltip: {
-          callbacks: {
-            label: function(ctx) { return " " + ctx.parsed[horizontal ? "x" : "y"]; }
-          },
-          backgroundColor: "#1e293b",
-          titleColor: "#f1f5f9",
-          bodyColor: "#cbd5e1",
-          padding: 8
-        }
+        tooltip: { callbacks:{ label:function(ctx){return " "+ctx.parsed[horizontal?"x":"y"];} }, backgroundColor:"#1e293b", titleColor:"#f1f5f9", bodyColor:"#cbd5e1", padding:8 }
       })
     })
   });
 }
 
-var PIE_COLORS = ["#4a6fa5","#a8c0dd","#2d5282","#d0dff0","#6b93c4","#e8eff7"];
 function makePie(id, data) {
   if (charts[id]) charts[id].destroy();
   var canvas = document.getElementById(id);
   if (!canvas) return;
-  var ctx = canvas.getContext("2d");
-  charts[id] = new Chart(ctx, {
+  charts[id] = new Chart(canvas.getContext("2d"), {
     type: "doughnut",
     data: {
       labels: data.map(function(d){ return d[0]; }),
       datasets: [{ data: data.map(function(d){ return d[1]; }), backgroundColor: PIE_COLORS, borderWidth: 2, borderColor: "#f8fafc" }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: "60%",
+      responsive: true, maintainAspectRatio: false, cutout: "60%",
       plugins: {
         legend: { position:"right", labels:{ color:"#374151", font:{size:10}, padding:8, boxWidth:10 } },
         tooltip: { backgroundColor:"#1e293b", titleColor:"#f1f5f9", bodyColor:"#cbd5e1", padding:8 }
@@ -548,40 +754,49 @@ function makePie(id, data) {
     }
   });
 }
+
 function renderCharts() {
-  makeBar("cCat", groupBy("Refund Category", 12), true);
-  makeBar("cCourse", groupBy("Course", 10), false);
-  makeBar("cPay", groupBy("Payment Mode", 10), false);
-  makeBar("cPcat", groupBy("Category", 8), false);
+  var fd = filteredRefunds();
+
+  function groupFiltered(field, limit) { return groupByField(fd, field, limit||12); }
+  function countFiltered(field, val) { return countValIn(fd, field, val); }
+
+  makeBar("cCat",    groupFiltered("Refund Category", 12), true);
+  makeBar("cCourse", groupFiltered("Course", 10), false);
+  makeBar("cPay",    groupFiltered("Payment Mode", 10), false);
+  makeBar("cPcat",   groupFiltered("Category", 8), false);
+
   makePie("cBU", [
-    ["Upfront Yes", countVal("Upfront Payment (Yes / No)","yes")],
-    ["Upfront No", countVal("Upfront Payment (Yes / No)","no")]
+    ["Upfront",     countFiltered("Upfront Payment (Yes / No)","yes")],
+    ["Non-Upfront", countFiltered("Upfront Payment (Yes / No)","no")],
+    ["Flexipay",    fd.filter(function(r){return get(r,"Upfront Payment (Yes / No)").toLowerCase()==="flexipay";}).length]
   ]);
   makePie("cTrial", [
-    ["In Trial Window", countVal("Refund request received in Trial Window","yes")],
-    ["Outside Trial Window", countVal("Refund request received in Trial Window","no")]
+    ["In Trial Window",      countFiltered("Refund request received in Trial Window","yes")],
+    ["Outside Trial Window", countFiltered("Refund request received in Trial Window","no")]
   ]);
   makePie("cAlumni", [
-    ["New Learners", countVal("New / Alumni","new")],
-    ["Alumni", countVal("New / Alumni","alumni")]
+    ["New Learners", countFiltered("New / Alumni","new")],
+    ["Alumni",       countFiltered("New / Alumni","alumni")]
   ]);
   makePie("cRegion", [
-    ["Upfront", countVal("Upfront Status","Upfront")],
-    ["Flexipay", countVal("Upfront Status","Flexipay")],
-    ["Non-Upfront", countVal("Upfront Status","Non upfront")]
+    ["US",    countFiltered("Region","US")],
+    ["India", countFiltered("Region","India")],
+    ["Blank", fd.filter(function(r){return !get(r,"Region");}).length]
   ]);
 }
-// FLEXIPAY TABLE
+
+// FLEXIPAY TABLE — filter-aware
 function renderFlexipay() {
-  var flex = sheetData.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; });
-  var tc = 0, tr = 0;
-  var overCount = 0;
+  var fd = filteredRefunds();
+  var flex = fd.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; });
+  var tc = 0, tr = 0, overCount = 0;
 
   var tbody = document.getElementById("flexBody");
   if (!tbody) return;
 
   tbody.innerHTML = flex.map(function(r, i) {
-    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + get(r,"Hubspot ID")||get(r,"Hubspot ID")||get(r,"Hubspot id");
+    var name = get(r,"Name") && !get(r,"Name").startsWith("v1:") ? get(r,"Name") : "HubSpot: " + (get(r,"Hubspot ID")||get(r,"Hubspot id"));
     var c = parseAmt(get(r,"Amount Credited"));
     var rf = parseAmt(get(r,"Amount refunded"));
     tc += c; tr += rf;
@@ -602,7 +817,7 @@ function renderFlexipay() {
       "<td style='color:#1d4ed8;font-weight:600;font-size:12px'>$" + c.toLocaleString() + "</td>" +
       "<td style='color:" + (rf>c?"#dc2626":rf===0?"#94a3b8":"#166534") + ";font-weight:600;font-size:12px'>" + (rf===0?"—":"$"+rf.toLocaleString()) + "</td>" +
       "<td style='color:" + (d>0?"#dc2626":d<0?"#166534":"#64748b") + ";font-weight:700;font-size:12px'>" + (d===0?"±0":d>0?"+$"+d.toLocaleString():"-$"+Math.abs(d).toLocaleString()) + "</td>" +
-      "<td style='color:#64748b;font-size:12px'>" + (get(r,"Refund period Bucket")||"—") + "</td>" +
+      "<td style='color:#64748b;font-size:12px'>" + (get(r,"Duration Bucket")||"—") + "</td>" +
       "<td style='font-size:11px'><span style='background:#f1f5f9;border-radius:4px;padding:2px 7px;color:#475569'>" + (get(r,"Refund Category")||"—") + "</span></td>" +
       "<td style='color:#64748b;font-size:11px'>" + (get(r,"Payment Mode")||"—") + "</td>" +
       "<td>" + flag + "</td>" +
@@ -615,27 +830,26 @@ function renderFlexipay() {
     summary.innerHTML =
       '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:12px">' +
       '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">' +
-        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Learners</div>' +
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Total Learners</div>' +
         '<div style="font-size:26px;font-weight:700;color:#1e40af;margin-top:4px">' + flex.length + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Flexipay refunds</div></div>' +
       '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">' +
-        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Installments Collected</div>' +
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Installments Collected</div>' +
         '<div style="font-size:26px;font-weight:700;color:#1d4ed8;margin-top:4px">$' + tc.toLocaleString() + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Total credited</div></div>' +
       '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">' +
-        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Total Refunded</div>' +
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Total Refunded</div>' +
         '<div style="font-size:26px;font-weight:700;color:#dc2626;margin-top:4px">$' + tr.toLocaleString() + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Amount returned</div></div>' +
       '<div style="background:#fff;border:1px solid ' + (netDelta>0?"#fca5a5":"#86efac") + ';border-radius:8px;padding:12px 16px">' +
-        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Net Difference</div>' +
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Net Difference</div>' +
         '<div style="font-size:26px;font-weight:700;color:' + (netDelta>0?"#dc2626":"#166534") + ';margin-top:4px">' + (netDelta>0?"+$":"-$") + Math.abs(netDelta).toLocaleString() + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">' + (netDelta>0?"Over-refunded":"Within collected") + '</div></div>' +
       '<div style="background:#fff;border:1px solid #fca5a5;border-radius:8px;padding:12px 16px">' +
-        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px">Over-refunded Cases</div>' +
+        '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Over-refunded Cases</div>' +
         '<div style="font-size:26px;font-weight:700;color:#dc2626;margin-top:4px">' + overCount + '</div>' +
         '<div style="font-size:11px;color:#94a3b8;margin-top:2px">Refunded &gt; installment paid</div></div>' +
-      '</div>' +
-'';
+      '</div>';
   }
 }
 
@@ -643,7 +857,7 @@ function renderFlexipay() {
 function switchTab(t) {
   document.querySelectorAll(".tab").forEach(function(el){ el.classList.toggle("active", el.dataset.tab === t); });
   document.querySelectorAll(".panel").forEach(function(el){ el.classList.toggle("active", el.id === "panel-" + t); });
-  if (t === "charts" && sheetData.length > 0) { renderCharts(); }
+  if (t === "charts" && sheetData.length > 0) renderCharts();
 }
 
 // TOAST
@@ -666,7 +880,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds · Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -680,32 +894,44 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   </div>
 </div>
 
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <label>Filter by:</label>
+  <select id="filterQ" onchange="applyFilter()">
+    <option value="all">All Quarters</option>
+  </select>
+  <select id="filterY" onchange="applyFilter()">
+    <option value="all">All Years</option>
+  </select>
+  <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
+  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts. Chat is independent.</span>
+</div>
+
 <!-- STAT BAR -->
-<div id="statsBar" class="stats" style="background:#e8edf2"></div>
+<div id="statsBar" class="stats"></div>
 
 <!-- CHAT PANEL -->
 <div id="panel-chat" class="panel active">
   <div class="pills">
-    <span class="pill" onclick="sendMessage('Give me an executive summary of Q4 enrollments and refunds')">Executive summary</span>
-    <span class="pill" onclick="sendMessage('What is the refund rate for Q4 2025?')">Refund rate</span>
-    <span class="pill" onclick="sendMessage('How many learners are fully paid vs refunded?')">Payment status</span>
-    <span class="pill" onclick="sendMessage('Which program type has most enrollments?')">Program analysis</span>
-    <span class="pill" onclick="sendMessage('What is the onboarding success rate?')">OB success rate</span>
-    <span class="pill" onclick="sendMessage('Which SSA has most enrollments?')">SSA breakdown</span>
+    <span class="pill" onclick="sendMessage('Give me an executive summary of all quarters — enrollments and refunds')">Executive summary</span>
+    <span class="pill" onclick="sendMessage('What is the refund rate for each quarter in 2025?')">Refund rate by quarter</span>
+    <span class="pill" onclick="sendMessage('How many upfront, non-upfront and flexipay refunds are there?')">Upfront breakdown</span>
+    <span class="pill" onclick="sendMessage('Which program type has the most enrollments in 2025?')">Program analysis</span>
+    <span class="pill" onclick="sendMessage('What is the onboarding success rate across all quarters?')">OB success rate</span>
     <span class="pill" onclick="sendMessage('What are the top 5 refund reasons with counts?')">Top refund reasons</span>
     <span class="pill" onclick="sendMessage('Analyse all PA Mis-sell cases in detail')">PA Mis-sell analysis</span>
-    <span class="pill" onclick="sendMessage('Show me all Flexipay learner details')">Flexipay details</span>
-    <span class="pill" onclick="sendMessage('Which course has the most refunds and why?')">Course analysis</span>
+    <span class="pill" onclick="sendMessage('Show me all Flexipay learner refund details')">Flexipay details</span>
+    <span class="pill" onclick="sendMessage('Which course has the most refunds?')">Course refund analysis</span>
     <span class="pill" onclick="sendMessage('How many refunds happened within the trial window?')">Trial window stats</span>
-    <span class="pill" onclick="sendMessage('What is the total amount refunded and credited?')">Total amounts</span>
+    <span class="pill" onclick="sendMessage('What is the total amount refunded vs credited?')">Total amounts</span>
+    <span class="pill" onclick="sendMessage('Break down refunds by BU and category')">BU breakdown</span>
+    <span class="pill" onclick="sendMessage('Who are the top PAs and managers with most refunds?')">PA & Manager breakdown</span>
     <span class="pill" onclick="sendMessage('What actions should we take to reduce refunds?')">Action plan</span>
-    <span class="pill" onclick="sendMessage('Break down refunds by BU and program category')">BU breakdown</span>
-    
   </div>
   <div id="messages" class="messages">
     <div class="empty">
       <div style="font-size:52px;margin-bottom:12px">🤖</div>
-      <p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund data.<br/>I read live from your Google Sheet.</p>
+      <p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund or enrollment data.<br/>I read live from your Google Sheet.</p>
     </div>
   </div>
   <div id="loadingDots" class="dots">
@@ -715,7 +941,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <span style="font-size:11px;color:#718096;margin-left:4px">Analysing…</span>
   </div>
   <div class="input-row">
-    <input id="chatInput" class="chat-input" placeholder="Ask anything about your refund data…" onkeydown="if(event.key==='Enter')sendMessage()"/>
+    <input id="chatInput" class="chat-input" placeholder="Ask anything about refund or enrollment data…" onkeydown="if(event.key==='Enter')sendMessage()"/>
     <button id="sendBtn" class="send-btn" onclick="sendMessage()">Send →</button>
   </div>
 </div>
@@ -724,8 +950,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-charts" class="panel" style="gap:14px">
   <div class="card full"><h3>Refund Categories — Why Learners Left</h3><div style="height:220px;position:relative"><canvas id="cCat"></canvas></div></div>
   <div class="grid2">
-    <div class="card"><h3>Upfront Payment</h3><div style="height:110px;position:relative"><canvas id="cBU"></canvas></div></div>
-    <div class="card"><h3>Trial Window</h3><div style="height:110px;position:relative"><canvas id="cTrial"></canvas></div></div>
+    <div class="card"><h3>Upfront / Non-Upfront / Flexipay</h3><div style="height:120px;position:relative"><canvas id="cBU"></canvas></div></div>
+    <div class="card"><h3>Trial Window</h3><div style="height:120px;position:relative"><canvas id="cTrial"></canvas></div></div>
   </div>
   <div class="card full"><h3>Top Courses by Refund Count</h3><div style="height:230px;position:relative"><canvas id="cCourse"></canvas></div></div>
   <div class="grid2">
@@ -733,31 +959,21 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="card"><h3>Program Categories</h3><div style="height:240px;position:relative"><canvas id="cPcat"></canvas></div></div>
   </div>
   <div class="grid2">
-    <div class="card"><h3>New vs Alumni</h3><div style="height:110px;position:relative"><canvas id="cAlumni"></canvas></div></div>
-    <div class="card"><h3>Region</h3><div style="height:110px;position:relative"><canvas id="cRegion"></canvas></div></div>
+    <div class="card"><h3>New vs Alumni</h3><div style="height:120px;position:relative"><canvas id="cAlumni"></canvas></div></div>
+    <div class="card"><h3>Region</h3><div style="height:120px;position:relative"><canvas id="cRegion"></canvas></div></div>
   </div>
 </div>
 
 <!-- FLEXIPAY PANEL -->
 <div id="panel-flexipay" class="panel">
-  <!-- Key metrics row -->
   <div id="flexSummary"></div>
-  <!-- Main table -->
   <div style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0">
     <table>
       <thead>
         <tr>
-          <th>#</th>
-          <th>Learner / ID</th>
-          <th>Course</th>
-          <th>BU</th>
-          <th>Installment Paid</th>
-          <th>Amount Refunded</th>
-          <th>Difference (Δ)</th>
-          <th>Refund Window</th>
-          <th>Refund Category</th>
-          <th>Payment Mode</th>
-          <th>Status</th>
+          <th>#</th><th>Learner / ID</th><th>Course</th><th>BU</th>
+          <th>Installment Paid</th><th>Amount Refunded</th><th>Difference (Δ)</th>
+          <th>Duration Bucket</th><th>Refund Category</th><th>Payment Mode</th><th>Status</th>
         </tr>
       </thead>
       <tbody id="flexBody"></tbody>
@@ -769,32 +985,32 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-insights" class="panel">
   <div class="grid2">
     <div class="card" style="border-left:3px solid #dc2626">
-      <h3 style="color:#dc2626;font-size:13px">PA Mis-sell — 11 Cases</h3>
+      <h3 style="color:#dc2626;font-size:13px">PA Mis-sell — Top Refund Category</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Program Advisors incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
     </div>
     <div class="card" style="border-left:3px solid #d97706">
-      <h3 style="color:#d97706;font-size:13px">76% Refunds in Trial Window</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">Most learners drop before attending even 2 live classes. <strong style="color:#1a202c">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
+      <h3 style="color:#d97706;font-size:13px">Majority of Refunds in Trial Window</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Most learners drop before completing the trial period. <strong style="color:#1a202c">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
     </div>
     <div class="card" style="border-left:3px solid #2563eb">
       <h3 style="color:#2563eb;font-size:13px">Flagship ML — Highest Refund Count</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">27 refunds — highest in absolute count. <strong style="color:#1a202c">Action:</strong> Cross-reference with enrollment numbers. If refund rate is disproportionate, investigate early-class quality and PA expectation-setting.</p>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Highest refund count among all courses. <strong style="color:#1a202c">Action:</strong> Cross-reference with enrollment numbers to assess refund rate. If disproportionate, investigate early-class quality and PA expectation-setting.</p>
     </div>
     <div class="card" style="border-left:3px solid #059669">
-      <h3 style="color:#059669;font-size:13px">Content / Curriculum — 15 Cases</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">Learners found content too basic or misaligned with FAANG goals. <strong style="color:#1a202c">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
+      <h3 style="color:#059669;font-size:13px">Content / Curriculum Issues</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Learners found content too basic or misaligned with their goals. <strong style="color:#1a202c">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
     </div>
     <div class="card" style="border-left:3px solid #7c3aed">
-      <h3 style="color:#7c3aed;font-size:13px">Financial Hardship — 27 Cases</h3>
+      <h3 style="color:#7c3aed;font-size:13px">Financial Hardship — Significant Category</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#1a202c">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
     </div>
     <div class="card" style="border-left:3px solid #d97706">
-      <h3 style="color:#d97706;font-size:13px">41 Policy Exceptions Approved</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">41 refunds approved outside normal policy — signals ad-hoc decision making. <strong style="color:#1a202c">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
+      <h3 style="color:#d97706;font-size:13px">Policy Exceptions — Track Accountability</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Refunds approved outside normal policy signal ad-hoc decision making. <strong style="color:#1a202c">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
     </div>
     <div class="card" style="border-left:3px solid #dc2626">
-      <h3 style="color:#dc2626;font-size:13px">8 Learners Unreachable at Onboarding</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">8 learners show "VM - 4 Attempts" — never reached at onboarding. <strong style="color:#1a202c">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
+      <h3 style="color:#dc2626;font-size:13px">Learners Unreachable at Onboarding</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">VM - 4 Attempts cases mean learners were never reached at onboarding. <strong style="color:#1a202c">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
     </div>
     <div class="card" style="border-left:3px solid #475569">
       <h3 style="color:#475569;font-size:13px">H1B Visa — Macro Risk for US Cohorts</h3>
@@ -804,99 +1020,4 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 </div>
 
 </body>
-</html"ENROLLMENT DATA (Full Year 2025 — 4 quarters):\n" +
-    "Total Enrollments: " + enrollData.length + " across Q1+Q2+Q3+Q4 2025\n\n" +
-
-    "ENROLLMENT BY QUARTER+YEAR (dynamic from live sheet):\n" +
-    (function(){
-      var qy={};
-      enrollData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
-      return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" enrollments"; }).join("\n");
-    })() + "\n\n" +
-
-    "COLUMN REFERENCE (Enrollment Tab):\n" +
-    "  Program Type: Category of learner program (EdgeUp/Level Up/New ML/Step Up/Agentic SkillUp/Advanced ML/AgentUp etc.)\n" +
-    "  Candidate ID: Internal candidate identifier\n" +
-    "  Name: Learner full name\n" +
-    "  HS ID: HubSpot ID\n" +
-    "  Email / HS ID: Email address or HubSpot ID\n" +
-    "  Time Zone: Learner timezone (mostly US timezones, 100 blank)\n" +
-    "  Program Name: Full program name (specific course title)\n" +
-    "  Current Cohort: Cohort learner is currently assigned to\n" +
-    "  Deposit Paid Date: Date learner first paid deposit to secure enrollment\n" +
-    "  Quarter + Year: Quarter and year of enrollment\n\n" +
-
-    "PAYMENT COLUMNS (Enrollment Tab — 3 separate columns):\n" +
-    "  Initial Payment Type: Payment status when learner first joined (has_paid_in_full/Flexipay_has_time_to_pay/has_time_to_pay etc.)\n" +
-    "  System Payment Status: Technical system status (ENROLLED_WITH_NO_DUES/ENROLLED/FULL_PAYMENT_PAID etc.)\n" +
-    "  Live Status: Current live status of learner — most up to date:\n" +
-    "    Fully Paid=" + enrollData.filter(function(r){return get(r,"Live Status")==="Fully Paid";}).length +
-    " | Flexipay_has_time_to_pay=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay_has_time_to_pay";}).length +
-    " | Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Refunded";}).length +
-    " | Flexipay Refunded=" + enrollData.filter(function(r){return get(r,"Live Status")==="Flexipay Refunded";}).length +
-    " | Dropped Out=" + enrollData.filter(function(r){return get(r,"Live Status")==="Dropped Out";}).length +
-    " | Blank=" + enrollData.filter(function(r){return !get(r,"Live Status");}).length + "\n" +
-    "  Payment Category: Manager-preferred grouping — Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Upfront";}).length +
-    " | Non Upfront=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Non Upfront";}).length +
-    " | Flexipay=" + enrollData.filter(function(r){return get(r,"Payment Category")==="Flexipay";}).length + "\n" +
-    "  Payment Mode: STRIPE_CARD/AFFIRM_VIA_STRIPE/KLARNA/0_PERCENT_APR_FLEXIPAY/STRIPE_MANUAL_PAYMENT/PAYPAL/ACH_TRANSFER/CLIMBCREDIT etc. | Blank=169\n\n" +
-
-    "PROGRAM TYPE BREAKDOWN BY QUARTER:\n" +
-    "  Q1 2025 (1037): Level Up:250|EdgeUp:212|Step Up:145|New ML:121|Advanced ML:74\n" +
-    "  Q2 2025 (1215): EdgeUp:231|Level Up:195|New ML:154|Step Up:132|Agentic SkillUp:118\n" +
-    "  Q3 2025 (1430): EdgeUp:418|New ML:200|Level Up:168|Agentic SkillUp:147|Step Up:136\n" +
-    "  Q4 2025 (1019): EdgeUp:436|New ML:142|Level Up:121|Agentic SkillUp:105|Step Up:76\n\n" +
-
-    "PAYMENT CATEGORY BY QUARTER:\n" +
-    "  Q1 2025: Upfront=861|Non Upfront=63|Flexipay=111\n" +
-    "  Q2 2025: Upfront=1067|Non Upfront=108|Flexipay=40\n" +
-    "  Q3 2025: Upfront=1236|Non Upfront=68|Flexipay=126\n" +
-    "  Q4 2025: Upfront=787|Non Upfront=59|Flexipay=124\n\n" +
-
-    "SSA (Student Success Advisor):\n" +
-    "  Current SSA: person currently handling the learner\n" +
-    "  Original SSA: SSA who first onboarded the learner\n" +
-    "  Top Current SSAs: Sanjana:327|Muskan:322|Arush:317|Archi:307|Anjali:283|Anshuman:277|Nishtha:276|Sharon:268\n" +
-    "  Top Original SSAs: Nishtha:333|Arush:317|Muskan:307|Shelly:297|Anshuman:292|Anjali:276|Samarth:276\n\n" +
-
-    "OB STATUS BY QUARTER:\n" +
-    "  Q1 2025: Onboarded=792|VM-4 Attempts=154|Blank=4\n" +
-    "  Q2 2025: Onboarded=944|VM-4 Attempts=205|Incomplete OB=23\n" +
-    "  Q3 2025: Onboarded=1132|VM-4 Attempts=157|Incomplete OB=48|Blank=42\n" +
-    "  Q4 2025: Onboarded=835|VM-4 Attempts=95|Incomplete OB=30|Blank=59\n" +
-    "  Overall OB Success Rate: 3703/4701 = 78.8%\n\n" +
-
-    "OVERLAPPING COLUMNS RULE:\n" +
-    "  Payment Mode, Payment Category, Deposit/Receipt Date exist in BOTH tabs.\n" +
-    "  ALWAYS ask the manager to clarify which tab they mean before answering.\n" +
-    "  Example: 'Do you mean payment mode from enrollments or refunds data?'\n\n" +
-
-    "REFUND RATE CALCULATIONS — USE ENROLLMENT + REFUND DATA TOGETHER:\n" +
-    "  Refund Rate formula: (Refunds in Quarter / Enrollments in Quarter) x 100\n" +
-    "  QUARTERLY REFUND RATES (use these for quarter-specific refund rate questions):\n" +
-    "  Q1 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q1"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q1"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q1"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q1"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
-    "  Q2 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q2"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q2"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q2"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q2"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
-    "  Q3 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q3"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q3"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q3"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q3"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
-    "  Q4 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q4"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q4"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q4"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q4"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
-    "  Full Year 2025: " + sheetData.length + " refunds / " + enrollData.length + " enrollments = " + (enrollData.length>0?(sheetData.length/enrollData.length*100).toFixed(1)+"%":"N/A") + "\n\n" +
-    "  REFUND COUNT SOURCES:\n" +
-    "  Refunds tab = " + sheetData.length + " refunds (source of truth for all refund analysis)\n" +
-    "  Enrollment tab Live Status Refunded = " + enrollData.filter(function(r){return get(r,"Live Status")==="Refunded"||get(r,"Live Status")==="Flexipay Refunded";}).length + " (different tracking, may not match)\n" +
-    "  Always use Refunds tab count for refund questions. Mention enrollment Live Status only if specifically asked.\n\n" +
-
-    "BLANK VALUE RULE: Always mention blank counts separately when reporting by category.\n\n" +"DATES — ALL COLUMNS EXPLAINED:\n" +
-    "  Date of Receipt: Date learner paid deposit (all 522 filled)\n" +
-    "  Cohort: Cohort name/label | Cohort Start Date: When cohort started (502 filled, 20 blank)\n" +
-    "  Orientation Date: Date of learner orientation — blank means not attended or not recorded\n" +
-    "  First Class Date: Date of learner first live class — blank means not attended or not recorded\n" +
-    "  Refund Request Date by learner: Date LEARNER first asked OPS for refund (all 522 filled)\n" +
-    "  Request Date: Date OPS raised refund to FINANCE team (all 522 filled) — different from above\n" +
-    "  Refund Date: Date refund was actually issued to learner (520 filled, 2 blank)\n\n" +
-    "TWO REQUEST DATES — ALWAYS CLARIFY:\n" +
-    "  If asked when refund was requested — ask: do you mean when the learner asked (Refund Request Date by learner) or when ops forwarded to finance (Request Date)?\n" +
-    "  Avg gap Learner→Ops-to-Finance: 13 days. Same day=5|1-3 days=87|4-7 days=153|8-14 days=145|15+ days=126\n" +
-    "  Avg gap Receipt→Learner Request: 37.6 days. ≤0=13|1-7=145|8-21=158|22+=204\n\n" +
-    "ORIENTATION & FIRST CLASS DATE:\n" +
-    "  Use to answer: how many requested refund before/after orientation or before/after first class?\n" +
-    "  Compare Refund Request Date by learner vs Orientation Date vs First Class Date.\n" +
-    "  Blank orientation/first class date = learner did not attend or data not yet recorded.\n\n" +>
+</html>
