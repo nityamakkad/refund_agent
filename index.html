@@ -458,9 +458,9 @@ function updateStats() {
     {l:"Total Enrollments", v:totalEnroll||"—", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds", v:total, c:"#f87171", i:"↩"},
     {l:"Refund Rate", v:refundRate, c:"#dc2626", i:"📉"},
-    {l:"Upfront Enrollments", v:upfront||"—", c:"#34d399", i:"✅"},
-    {l:"Non-Upfront Enrollments", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
-    {l:"Flexipay Enrollments", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
+    {l:"Upfront", v:upfront||"—", c:"#34d399", i:"✅"},
+    {l:"Non-Upfront", v:nonUpfront||"—", c:"#0ea5e9", i:"📋"},
+    {l:"Flexipay", v:flexipayEnroll||"—", c:"#f59e0b", i:"💳"}
   ];
 
   var bar = document.getElementById("statsBar");
@@ -666,7 +666,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds 2025</p>
+      <p style="font-size:11px;color:#718096">Live from Google Sheets · Enrollments + Refunds · Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -871,11 +871,18 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     "  ALWAYS ask the manager to clarify which tab they mean before answering.\n" +
     "  Example: 'Do you mean payment mode from enrollments or refunds data?'\n\n" +
 
-    "REFUND COUNT CLARIFICATION:\n" +
-    "  Refunds tab = 522 refunds (source of truth for refund analysis)\n" +
-    "  Enrollment tab Live Status = 340 marked Refunded (includes Flexipay Refunded=29)\n" +
-    "  Difference exists because some refunds span quarters or have different tracking.\n" +
-    "  When asked 'how many refunds': mention both numbers and explain the difference.\n\n" +
+    "REFUND RATE CALCULATIONS — USE ENROLLMENT + REFUND DATA TOGETHER:\n" +
+    "  Refund Rate formula: (Refunds in Quarter / Enrollments in Quarter) x 100\n" +
+    "  QUARTERLY REFUND RATES (use these for quarter-specific refund rate questions):\n" +
+    "  Q1 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q1"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q1"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q1"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q1"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
+    "  Q2 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q2"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q2"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q2"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q2"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
+    "  Q3 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q3"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q3"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q3"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q3"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
+    "  Q4 2025: " + sheetData.filter(function(r){return get(r,"Quarter")==="Q4"&&get(r,"Year")==="2025";}).length + " refunds / " + enrollData.filter(function(r){return get(r,"Quarter")==="Q4"&&get(r,"Year")==="2025";}).length + " enrollments = " + (function(){ var r=sheetData.filter(function(x){return get(x,"Quarter")==="Q4"&&get(x,"Year")==="2025";}).length; var e=enrollData.filter(function(x){return get(x,"Quarter")==="Q4"&&get(x,"Year")==="2025";}).length; return e>0?(r/e*100).toFixed(1)+"%":"N/A"; })() + "\n" +
+    "  Full Year 2025: " + sheetData.length + " refunds / " + enrollData.length + " enrollments = " + (enrollData.length>0?(sheetData.length/enrollData.length*100).toFixed(1)+"%":"N/A") + "\n\n" +
+    "  REFUND COUNT SOURCES:\n" +
+    "  Refunds tab = " + sheetData.length + " refunds (source of truth for all refund analysis)\n" +
+    "  Enrollment tab Live Status Refunded = " + enrollData.filter(function(r){return get(r,"Live Status")==="Refunded"||get(r,"Live Status")==="Flexipay Refunded";}).length + " (different tracking, may not match)\n" +
+    "  Always use Refunds tab count for refund questions. Mention enrollment Live Status only if specifically asked.\n\n" +
 
     "BLANK VALUE RULE: Always mention blank counts separately when reporting by category.\n\n" +"DATES — ALL COLUMNS EXPLAINED:\n" +
     "  Date of Receipt: Date learner paid deposit (all 522 filled)\n" +
