@@ -1074,12 +1074,12 @@ function renderRetention() {
 
   // Build status pill
   function pill(type, direction, status) {
-    var arrow = direction === "include" ? "→ Exclude" : "← Include";
-    var bg = direction === "include" ? "#dbeafe" : "#f1f5f9";
+    var bg  = direction === "include" ? "#dbeafe" : "#f1f5f9";
     var col = direction === "include" ? "#1e40af" : "#64748b";
+    var border = direction === "include" ? "#bfdbfe" : "#e2e8f0";
     var onclick = "moveStatus('"+type+"','"+( direction==="include"?"exclude":"include" )+"','"+status.replace(/'/g,"\'")+"')";
-    return '<span onclick="'+onclick+'" style="display:inline-flex;align-items:center;gap:4px;background:'+bg+';color:'+col+';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;margin:2px;border:1px solid '+(direction==="include"?"#bfdbfe":"#e2e8f0")+'" title="Click to move">'+
-      status+'<span style="opacity:0.6;font-size:9px">'+arrow+'</span></span>';
+    return '<span onclick="'+onclick+'" style="display:inline-flex;align-items:center;background:'+bg+';color:'+col+';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;margin:2px;border:1px solid '+border+'" title="Click to move/remove">'+
+      status+'</span>';
   }
 
   // Summary cards
@@ -1200,7 +1200,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1225,7 +1225,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Years</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts. Chat is independent.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
 </div>
 
 <!-- STAT BAR -->
