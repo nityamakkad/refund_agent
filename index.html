@@ -397,7 +397,24 @@ function buildPrompt() {
 "    Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Sale Retained / Dropped");}).length + "\n" +
 "  'Student Retained / Dropped - For Retention' = Ops/Operations team's perspective for retention calculation\n" +
 "    Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Student Retained / Dropped - For Retention");}).length + "\n" +
-"  Always clarify which column when someone asks about retained/dropped — sales view vs ops view are different.\n\n" +
+"  Always clarify which column when someone explicitly asks about retained/dropped from a sales or ops perspective — sales view vs ops view are different.\n\n" +
+
+"GENERAL RETAINED CALCULATION (default meaning of 'retained' unless explicitly asked about the column):\n" +
+"  Retained = Enrollments minus Refunds for the same period (quarter, month, or overall)\n" +
+"  Formula: Retained = Enrollments (from Enrollments tab) - Refunds (from Refunds tab)\n" +
+"  Overall: Enrollments=" + enrollData.length + " | Refunds=" + sheetData.length + " | Retained=" + (enrollData.length - sheetData.length) + "\n" +
+"  By Quarter:\n" +
+(function(){
+  var quarters = ["Q1","Q2","Q3","Q4"];
+  return quarters.map(function(q){
+    var e = enrollData.filter(function(r){return get(r,"Quarter")===q && get(r,"Year")==="2025";}).length;
+    var r = sheetData.filter(function(r){return get(r,"Quarter")===q && get(r,"Year")==="2025";}).length;
+    return "    "+q+" 2025: Enrollments="+e+" | Refunds="+r+" | Retained="+(e-r);
+  }).join("\n");
+})() + "\n" +
+"  By Month: When asked about a specific month (e.g. 'how many enrolled in July 2025, how many refunded, how many retained'), use Enrollment Month and Year from Enrollments tab for enrollments, Refund Month and Year from Refunds tab for refunds, and subtract to get retained.\n" +
+"  Example logic for July 2025: Enrollments in July 2025 (Enrollment Month and Year) minus Refunds in July 2025 (Refund Month and Year) = Retained in July 2025\n" +
+"  IMPORTANT: When someone asks 'how many retained' in general without specifying a column, always use this Enrollments minus Refunds formula. Only refer to the 'Student Retained / Dropped - For Retention' column when the user explicitly asks about that specific ops/retention column.\n\n" +
 
 // ─── TYPE COLUMN ───
 "TYPE COLUMN:\n" +
