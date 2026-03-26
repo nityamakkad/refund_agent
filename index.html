@@ -526,10 +526,28 @@ function buildPrompt() {
 "  These are two different people sometimes — current vs original.\n\n" +
 
 "OB STATUS (Enrollment Tab):\n" +
+"  Only 'Onboarded' = successfully onboarded. Everything else = not successfully onboarded.\n" +
 "  Onboarded=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length +
 " | VM - 4 Attempts=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="VM - 4 Attempts";}).length +
-" | Incomplete OB=" + (enrollData.filter(function(r){return get(r,"OB STATUS")==="Incomplete OB";}).length + enrollData.filter(function(r){return get(r,"OB STATUS")==="Incomplete OB";}).length) +
-" | Blank=" + enrollData.filter(function(r){return !get(r,"OB STATUS");}).length + " (other statuses exist for callbacks, yet to connect, etc.)\n\n" +
+" | Incomplete OB=" + enrollData.filter(function(r){return get(r,"OB STATUS").indexOf("Incomplete OB")===0;}).length +
+" | VM/VM Not Setup=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="VM/VM Not Setup";}).length +
+" | Callback Requested=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Callback Requested";}).length +
+" | Yet to Connect=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Yet to Connect";}).length +
+" | Failed OB=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Failed OB";}).length +
+" | Blank=" + enrollData.filter(function(r){return !get(r,"OB STATUS");}).length + " (other misc statuses exist)\n" +
+"  OB SUCCESS RATE FORMULA: Onboarded count / Total enrollments × 100. NEVER use total enrollments as onboarded count.\n" +
+"  Overall OB Success Rate: " + enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length + " / " + enrollData.length + " = " + (enrollData.length > 0 ? (enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length / enrollData.length * 100).toFixed(1) : "N/A") + "%\n" +
+"  MONTHWISE OB SUCCESS RATE (use Enrollment Month column):\n" +
+(function(){
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return months.map(function(m){
+    var total = enrollData.filter(function(r){return get(r,"Enrollment Month")===m;}).length;
+    var onboarded = enrollData.filter(function(r){return get(r,"Enrollment Month")===m && get(r,"OB STATUS")==="Onboarded";}).length;
+    var notOnboarded = total - onboarded;
+    var rate = total > 0 ? (onboarded/total*100).toFixed(1) : "0";
+    return "    "+m+": Total="+total+" | Onboarded="+onboarded+" | Not Onboarded="+notOnboarded+" | Rate="+rate+"%";
+  }).join("\n");
+})() + "\n\n" +
 
 // ─────────────────────────────────────────────
 // CROSS-TAB: REFUND RATE
@@ -951,7 +969,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -975,7 +993,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Years</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
