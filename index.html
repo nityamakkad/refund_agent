@@ -204,6 +204,7 @@ async function fetchSheet() {
     updateStats();
     renderCharts();
     renderFlexipay();
+    renderRetention();
     showToast("Loaded — " + sheetData.length + " refunds, " + enrollData.length + " enrollments", false);
   } catch(e) {
     console.error("Sheet error:", e);
@@ -262,6 +263,9 @@ function applyFilter() {
   updateStats();
   renderCharts();
   renderFlexipay();
+  if (document.getElementById("panel-retention") && document.getElementById("panel-retention").classList.contains("active")) {
+    renderRetention();
+  }
 }
 
 // BUILD SYSTEM PROMPT
@@ -957,11 +961,223 @@ function renderFlexipay() {
   }
 }
 
+// RETENTION CALCULATION STATE
+var retentionState = null;
+
+function initRetentionState() {
+  if (retentionState) return; // only init once
+
+  // All statuses from data
+  var allStatuses = [
+    "Dispute Lost","Dispute Lost - Pre Q4 Lead","Dropped Out","Flexipay Drop",
+    "Flexipay Refunded","Flexipay_Dispute Lost","Flexipay_has_time_to_pay","Fully Paid",
+    "GPM Refund","Invalid","Invalid Lead","Lost dispute","Not to be Counted",
+    "Ongoing Discussion","PA Mis-Sell","PE from prev. Q - Dropped in Q4",
+    "PE from prev. Q - Fully Paid in Q4","Potential Drop","Potential Error",
+    "Potential Error from Q3","Pre Q4 Refund","Proactive Refund","Refunded",
+    "Refunded/Dropped in Prev. Q - Fully paid in Q4","Unpaid Move","has_time_to_pay"
+  ];
+
+  // Denominator: exclude Not to be Counted, Invalid, Invalid Lead by default
+  var denomExcluded = ["Not to be Counted","Invalid","Invalid Lead"];
+
+  // Numerator: exclude PA Mis-Sell and all Flexipay variants by default, start with Fully Paid included
+  var numerExcluded = [
+    "PA Mis-Sell","Flexipay Drop","Flexipay Refunded","Flexipay_Dispute Lost",
+    "Flexipay_has_time_to_pay","Dispute Lost","Dispute Lost - Pre Q4 Lead",
+    "Dropped Out","GPM Refund","Lost dispute","Not to be Counted","Invalid","Invalid Lead",
+    "Ongoing Discussion","PE from prev. Q - Dropped in Q4","Potential Drop",
+    "Potential Error","Potential Error from Q3","Pre Q4 Refund","Proactive Refund",
+    "Refunded","Refunded/Dropped in Prev. Q - Fully paid in Q4","Unpaid Move"
+  ];
+
+  retentionState = {
+    allStatuses: allStatuses,
+    denomIncluded: allStatuses.filter(function(s){ return denomExcluded.indexOf(s) === -1; }),
+    denomExcluded: denomExcluded,
+    numerIncluded: allStatuses.filter(function(s){ return numerExcluded.indexOf(s) === -1; }),
+    numerExcluded: numerExcluded
+  };
+}
+
+function moveStatus(type, direction, status) {
+  // type = "denom" or "numer", direction = "include" or "exclude"
+  var inc = type === "denom" ? retentionState.denomIncluded : retentionState.numerIncluded;
+  var exc = type === "denom" ? retentionState.denomExcluded : retentionState.numerExcluded;
+
+  if (direction === "exclude") {
+    var idx = inc.indexOf(status);
+    if (idx > -1) { inc.splice(idx, 1); exc.push(status); exc.sort(); }
+  } else {
+    var idx = exc.indexOf(status);
+    if (idx > -1) { exc.splice(idx, 1); inc.push(status); inc.sort(); }
+  }
+  renderRetention();
+}
+
+// RETENTION PIVOT TABLE
+function renderRetention() {
+  initRetentionState();
+  var fe = filteredEnrollments();
+  var st = retentionState;
+
+  // Get program types from filtered data
+  var ptSeen = {};
+  var programTypes = [];
+  fe.forEach(function(r) {
+    var pt = get(r,"Program Type");
+    if (pt && !ptSeen[pt]) { ptSeen[pt]=true; programTypes.push(pt); }
+  });
+  programTypes.sort();
+
+  // Build counts per program type per status
+  var counts = {}; // counts[pt][ls] = n
+  programTypes.forEach(function(pt){ counts[pt]={}; });
+  fe.forEach(function(r) {
+    var pt=get(r,"Program Type"), ls=get(r,"Live Status");
+    if (!pt || !ls) return;
+    if (!counts[pt]) counts[pt]={};
+    counts[pt][ls] = (counts[pt][ls]||0)+1;
+  });
+
+  // Calculate per program type
+  function sumStatuses(pt, statuses) {
+    return statuses.reduce(function(s,ls){ return s+(counts[pt][ls]||0); }, 0);
+  }
+
+  // Grand totals row
+  var grandDenom=0, grandNumer=0;
+  var ptData = programTypes.map(function(pt) {
+    var grandTotal = fe.filter(function(r){return get(r,"Program Type")===pt;}).length;
+    var denom = sumStatuses(pt, st.denomIncluded);
+    var numer = sumStatuses(pt, st.numerIncluded);
+    var pct   = denom > 0 ? (numer/denom*100).toFixed(1) : "—";
+    grandDenom += denom; grandNumer += numer;
+    return { pt:pt, grandTotal:grandTotal, denom:denom, numer:numer, pct:pct };
+  });
+  var grandPct = grandDenom > 0 ? (grandNumer/grandDenom*100).toFixed(1) : "—";
+
+  function pctColor(p) {
+    var v = parseFloat(p);
+    if (isNaN(v)) return "#94a3b8";
+    if (v >= 90) return "#059669";
+    if (v >= 80) return "#b45309";
+    return "#dc2626";
+  }
+  function pctBg(p) {
+    var v = parseFloat(p);
+    if (isNaN(v)) return "#f8fafc";
+    if (v >= 90) return "#dcfce7";
+    if (v >= 80) return "#fef9c3";
+    return "#fee2e2";
+  }
+
+  // Build status pill
+  function pill(type, direction, status) {
+    var arrow = direction === "include" ? "→ Exclude" : "← Include";
+    var bg = direction === "include" ? "#dbeafe" : "#f1f5f9";
+    var col = direction === "include" ? "#1e40af" : "#64748b";
+    var onclick = "moveStatus('"+type+"','"+( direction==="include"?"exclude":"include" )+"','"+status.replace(/'/g,"\'")+"')";
+    return '<span onclick="'+onclick+'" style="display:inline-flex;align-items:center;gap:4px;background:'+bg+';color:'+col+';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;margin:2px;border:1px solid '+(direction==="include"?"#bfdbfe":"#e2e8f0")+'" title="Click to move">'+
+      status+'<span style="opacity:0.6;font-size:9px">'+arrow+'</span></span>';
+  }
+
+  // Summary cards
+  var overallPct = grandDenom > 0 ? (grandNumer/grandDenom*100).toFixed(1) : "0";
+  var summaryHtml =
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
+      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Total Enrollments</div>'+
+      '<div style="font-size:26px;font-weight:700;color:#1a56db;margin-top:4px">'+fe.length+'</div></div>'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
+      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Net Base (Denominator)</div>'+
+      '<div style="font-size:26px;font-weight:700;color:#475569;margin-top:4px">'+grandDenom+'</div></div>'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
+      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Retained (Numerator)</div>'+
+      '<div style="font-size:26px;font-weight:700;color:#1d4ed8;margin-top:4px">'+grandNumer+'</div></div>'+
+    '<div style="background:'+pctBg(overallPct)+';border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
+      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Overall Retention %</div>'+
+      '<div style="font-size:26px;font-weight:700;color:'+pctColor(overallPct)+';margin-top:4px">'+overallPct+'%</div>'+
+      '<div style="font-size:10px;color:#94a3b8;margin-top:2px">Numerator ÷ Denominator</div></div>'+
+    '</div>';
+
+  // Controls panel
+  var controlsHtml =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
+
+    // DENOMINATOR CONTROL
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">'+
+      '<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚖️ Denominator (Net Base)</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included statuses <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomIncluded.length+'</span></div>'+
+      '<div style="max-height:120px;overflow-y:auto;margin-bottom:8px">'+
+        st.denomIncluded.map(function(s){ return pill("denom","include",s); }).join('')+
+      '</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded statuses <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomExcluded.length+'</span></div>'+
+      '<div style="max-height:80px;overflow-y:auto">'+
+        st.denomExcluded.map(function(s){ return pill("denom","exclude",s); }).join('')+
+      '</div>'+
+    '</div>'+
+
+    // NUMERATOR CONTROL
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">'+
+      '<div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🎯 Numerator (Retained)</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included statuses <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerIncluded.length+'</span></div>'+
+      '<div style="max-height:120px;overflow-y:auto;margin-bottom:8px">'+
+        st.numerIncluded.map(function(s){ return pill("numer","include",s); }).join('')+
+      '</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded statuses <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerExcluded.length+'</span></div>'+
+      '<div style="max-height:80px;overflow-y:auto">'+
+        st.numerExcluded.map(function(s){ return pill("numer","exclude",s); }).join('')+
+      '</div>'+
+    '</div>'+
+    '</div>';
+
+  // Pivot table
+  var tableHtml =
+    '<div style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0">'+
+    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
+    '<thead>'+
+    '<tr style="background:#1a1040">'+
+    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:11px;font-weight:700;white-space:nowrap">Program Type</th>'+
+    '<th style="padding:11px 10px;text-align:center;color:#a78bfa;font-size:11px;font-weight:700">Grand Total</th>'+
+    '<th style="padding:11px 10px;text-align:center;color:#fbbf24;font-size:11px;font-weight:700">Net Base<br><span style="font-weight:400;font-size:9px;opacity:.8">Denominator</span></th>'+
+    '<th style="padding:11px 10px;text-align:center;color:#34d399;font-size:11px;font-weight:700">Numerator<br><span style="font-weight:400;font-size:9px;opacity:.8">Retained</span></th>'+
+    '<th style="padding:11px 14px;text-align:center;color:#fff;font-size:11px;font-weight:700">Retention %</th>'+
+    '</tr>'+
+    '</thead>'+
+    '<tbody>'+
+    ptData.map(function(d,i) {
+      return '<tr style="background:'+(i%2===0?"#fff":"#f8fafc")+'">'+
+        '<td style="padding:10px 14px;font-weight:600;color:#1e293b;font-size:12px">'+d.pt+'</td>'+
+        '<td style="padding:10px;text-align:center;color:#475569;font-weight:500">'+d.grandTotal+'</td>'+
+        '<td style="padding:10px;text-align:center;color:#475569;font-weight:600">'+d.denom+'</td>'+
+        '<td style="padding:10px;text-align:center;color:#1d4ed8;font-weight:600">'+d.numer+'</td>'+
+        '<td style="padding:10px 14px;text-align:center">'+
+          '<span style="background:'+pctBg(d.pct)+';color:'+pctColor(d.pct)+';padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px">'+
+          (d.pct==="—"?"—":d.pct+"%")+'</span></td>'+
+        '</tr>';
+    }).join('')+
+    '<tr style="background:#1a1040">'+
+    '<td style="padding:11px 14px;font-weight:700;color:#fff;font-size:12px">Grand Total</td>'+
+    '<td style="padding:11px 10px;text-align:center;color:#a78bfa;font-weight:700">'+fe.length+'</td>'+
+    '<td style="padding:11px 10px;text-align:center;color:#fbbf24;font-weight:700">'+grandDenom+'</td>'+
+    '<td style="padding:11px 10px;text-align:center;color:#34d399;font-weight:700">'+grandNumer+'</td>'+
+    '<td style="padding:11px 14px;text-align:center">'+
+      '<span style="background:'+pctBg(grandPct)+';color:'+pctColor(grandPct)+';padding:4px 12px;border-radius:20px;font-weight:700;font-size:13px">'+
+      (grandPct==="—"?"—":grandPct+"%")+'</span></td>'+
+    '</tr>'+
+    '</tbody></table></div>';
+
+  var container = document.getElementById("retentionPivot");
+  if (container) container.innerHTML = summaryHtml + controlsHtml + tableHtml;
+}
+
 // TAB SWITCH
 function switchTab(t) {
   document.querySelectorAll(".tab").forEach(function(el){ el.classList.toggle("active", el.dataset.tab === t); });
   document.querySelectorAll(".panel").forEach(function(el){ el.classList.toggle("active", el.id === "panel-" + t); });
-  if (t === "charts" && sheetData.length > 0) renderCharts();
+  if (t === "charts"    && sheetData.length > 0)  renderCharts();
+  if (t === "retention" && enrollData.length > 0) renderRetention();
 }
 
 // TOAST
@@ -992,7 +1208,8 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
       <button class="tab active" data-tab="chat"     onclick="switchTab('chat')">💬 Chat</button>
       <button class="tab"        data-tab="charts"   onclick="switchTab('charts')">📈 Charts</button>
       <button class="tab"        data-tab="flexipay" onclick="switchTab('flexipay')">💳 Flexipay</button>
-      <button class="tab"        data-tab="insights" onclick="switchTab('insights')">🧠 Insights</button>
+      <button class="tab"        data-tab="insights"   onclick="switchTab('insights')">🧠 Insights</button>
+      <button class="tab"        data-tab="retention" onclick="switchTab('retention')">🔁 Retention</button>
     </div>
     <button id="refreshBtn" class="refresh-btn" onclick="fetchSheet()">🔄 Refresh Data</button>
   </div>
@@ -1083,6 +1300,18 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
       <tbody id="flexBody"></tbody>
     </table>
   </div>
+</div>
+
+<!-- RETENTION PANEL -->
+<div id="panel-retention" class="panel">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+    <div>
+      <h3 style="font-size:13px;color:#1e40af;font-weight:700">🔁 Retention Calculator — by Program Type</h3>
+      <p style="font-size:11px;color:#718096;margin-top:2px">Click any status pill to move it between Included / Excluded. Retention % updates instantly.</p>
+    </div>
+    <button onclick="retentionState=null;renderRetention();" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#fee2e2;color:#dc2626">↺ Reset Defaults</button>
+  </div>
+  <div id="retentionPivot"></div>
 </div>
 
 <!-- INSIGHTS PANEL -->
