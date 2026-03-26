@@ -306,7 +306,14 @@ function buildPrompt() {
 
 "BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n\n" +
 
-"OVERLAPPING COLUMNS RULE: The columns Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH the Refunds tab and Enrollments tab. If a question about these is genuinely ambiguous (not clearly about refunds or enrollments), ask the manager which tab they mean before answering.\n\n" +
+"OVERLAPPING COLUMNS RULE: Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH tabs.\n" +
+"  DEPOSIT / RECEIPT DATE SPECIFICALLY:\n" +
+"    In Refunds tab: column is called 'Date of Receipt' = date learner paid their first deposit\n" +
+"    In Enrollments tab: column is called 'Deposit Paid Date' = same meaning, date learner paid first deposit\n" +
+"    These mean the same thing but are in different tabs. If someone asks 'how many learners paid first deposit in January' or 'how many paid deposit in January' — this is AMBIGUOUS. ALWAYS ask: do you mean from the Refunds tab or the Enrollments tab?\n" +
+"    If they clarify Refunds tab: extract month from 'Date of Receipt' column (format MM/DD/YYYY) by checking if month part = 1 for January, 2 for February etc. January 2025 from Refunds tab = 31 learners, January all years = 32.\n" +
+"    If they clarify Enrollments tab: use 'Enrollment Month' or 'Enrollment Month and Year' column directly.\n" +
+"  For other overlapping columns (Payment Mode, Payment Category): ask which tab if genuinely ambiguous.\n\n" +
 
 "CHART FORMAT: If asked to show a chart, respond in this exact pipe format on one line:\n" +
 "CHART|bar|Chart Title|Label1,Label2,Label3|10,20,30\n" +
@@ -339,7 +346,10 @@ function buildPrompt() {
 
 // ─── DATES ───
 "DATE COLUMNS — ALL EXPLAINED:\n" +
-"  Date of Receipt: Date learner paid their deposit (this is the deposit paid date — equivalent to enrollment date). All " + total + " rows filled.\n" +
+"  Date of Receipt: Date learner paid their deposit (format MM/DD/YYYY). All " + total + " rows filled.\n" +
+"    Monthly breakdown (extracted from Date of Receipt — 2025 only):\n" +
+"    January=31 | February=33 | March=55 | April=23 | May=22 | June=37 | July=56 | August=71 | September=69 | October=33 | November=31 | December=19\n" +
+"    NOTE: Date of Receipt is the deposit date — it is DIFFERENT from Refund Month. A learner may have paid deposit in January but got refunded in July. Use the correct column based on what is being asked.\n" +
 "  Cohort: Name/label of the learner's cohort\n" +
 "  Cohort Start Date: Date when the cohort officially started (most filled, some blank = not yet started or not recorded)\n" +
 "  Orientation Date: Date learner attended orientation — blank means not attended or not yet recorded\n" +
