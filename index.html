@@ -336,6 +336,21 @@ function buildPrompt() {
 "  Refund Request Date by learner: Date the LEARNER first raised the refund request with the OPS team — this is when the learner asked for a refund\n" +
 "  Request Date: Date the OPS team internally forwarded/raised the refund request to the FINANCE team — this is an internal ops step, different from when the learner asked\n" +
 "  Refund Date: Date the refund was actually processed and issued from the company's end to the learner — this is the final execution date\n\n" +
+"  Refund Month: Month name when refund was issued (e.g. January, July, September). Use this when asked 'how many refunds in July' or any month-only question.\n" +
+"    Breakdown: " + (function(){
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return months.map(function(m){
+    var c = sheetData.filter(function(r){ return get(r,"Refund Month")===m; }).length;
+    return m+"="+c;
+  }).filter(function(s){ return s.split("=")[1]!=="0"; }).join(" | ");
+})() + "\n" +
+"  Refund Month and Year: Month + Year combined (e.g. 'July 2025', 'January 2026'). Use this when asked 'how many refunds in July 2025' or any month+year question.\n" +
+"    Breakdown: " + (function(){
+  var c = {};
+  sheetData.forEach(function(r){ var v=get(r,"Refund Month and Year"); if(v&&v!=="December 1899")c[v]=(c[v]||0)+1; });
+  return Object.entries(c).sort().map(function(e){ return e[0]+": "+e[1]; }).join(" | ");
+})() + "\n" +
+"  NOTE: 2 rows show 'December 1899' in Refund Month and Year — these are data entry errors in the sheet, always exclude them from counts and flag them as errors if relevant.\n\n" +
 "THREE DATE CLARIFICATION RULES — ALWAYS FOLLOW:\n" +
 "  1. 'When did the learner request a refund?' → use 'Refund Request Date by learner'\n" +
 "  2. 'When was the refund raised/processed internally?' → use 'Request Date' (OPS to Finance)\n" +
@@ -506,6 +521,27 @@ function buildPrompt() {
 })() + "\n" +
 "  SOURCE OF TRUTH: Always use the Refunds tab for refund count and the Enrollments tab for enrollment count when calculating refund rate.\n" +
 "  NOTE: Live Status 'Refunded' in enrollments tab is a different tracking — do NOT use it for refund rate.\n\n" +
+
+"ENROLLMENT MONTH COLUMNS:\n" +
+"  Enrollment Month: Month name when learner enrolled (based on Deposit Paid Date). Use when asked 'how many enrollments in June' or any month-only question.\n" +
+"    Breakdown: " + (function(){
+  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return months.map(function(m){
+    var c = enrollData.filter(function(r){ return get(r,"Enrollment Month")===m; }).length;
+    return m+"="+c;
+  }).filter(function(s){ return s.split("=")[1]!=="0"; }).join(" | ");
+})() + "\n" +
+"  Enrollment Month and Year: Month + Year combined (e.g. 'June 2025', 'December 2024'). Use when asked 'how many enrollments in June 2025' or any month+year question.\n" +
+"    Breakdown: " + (function(){
+  var c = {};
+  var invalid = ["ENROLLED_WITH_NO_DUES"];
+  enrollData.forEach(function(r){
+    var v = get(r,"Enrollment Month and Year");
+    if(v && invalid.indexOf(v)===-1) c[v]=(c[v]||0)+1;
+  });
+  return Object.entries(c).sort().map(function(e){ return e[0]+": "+e[1]; }).join(" | ");
+})() + "\n" +
+"  NOTE: 1 row has 'ENROLLED_WITH_NO_DUES' as enrollment month — this is a data entry error, always exclude from counts and flag as an error if relevant.\n\n" +
 
 "PROGRAM TYPE BREAKDOWN BY QUARTER (Enrollments):\n" +
 (function(){
