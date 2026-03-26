@@ -333,10 +333,15 @@ function buildPrompt() {
 "  Cohort Start Date: Date when the cohort officially started (most filled, some blank = not yet started or not recorded)\n" +
 "  Orientation Date: Date learner attended orientation — blank means not attended or not yet recorded\n" +
 "  First Class Date: Date of learner's first live class — blank means not attended or not yet recorded\n" +
-"  Refund Request Date by learner: Date the LEARNER first asked OPS for a refund\n" +
-"  Request Date: Date OPS forwarded the refund request to the FINANCE team — different from above\n" +
-"  Refund Date: Date refund was actually issued to the learner\n\n" +
-"TWO REQUEST DATES — ALWAYS CLARIFY: If asked 'when was the refund requested', ask whether they mean when the learner asked (Refund Request Date by learner) or when ops raised it to finance (Request Date). These are different dates.\n\n" +
+"  Refund Request Date by learner: Date the LEARNER first raised the refund request with the OPS team — this is when the learner asked for a refund\n" +
+"  Request Date: Date the OPS team internally forwarded/raised the refund request to the FINANCE team — this is an internal ops step, different from when the learner asked\n" +
+"  Refund Date: Date the refund was actually processed and issued from the company's end to the learner — this is the final execution date\n\n" +
+"THREE DATE CLARIFICATION RULES — ALWAYS FOLLOW:\n" +
+"  1. 'When did the learner request a refund?' → use 'Refund Request Date by learner'\n" +
+"  2. 'When was the refund raised/processed internally?' → use 'Request Date' (OPS to Finance)\n" +
+"  3. 'When was the refund done/issued/processed?' → use 'Refund Date' (actual refund execution from company end)\n" +
+"  If a question about refund date or request date is ambiguous, ALWAYS ask: do you mean (a) when the learner requested it, (b) when OPS raised it to finance, or (c) when the refund was actually processed and issued?\n" +
+"  Never assume which date column to use without being sure of the user's intent.\n\n" +
 
 // ─── PAYMENT TYPE ───
 "UPFRONT / NON-UPFRONT / FLEXIPAY (Refunds Tab):\n" +
@@ -904,7 +909,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Years</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px">— filters stat cards &amp; charts. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
@@ -924,7 +929,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <span class="pill" onclick="sendMessage('Which course has the most refunds?')">Course refund analysis</span>
     <span class="pill" onclick="sendMessage('How many refunds happened within the trial window?')">Trial window stats</span>
     <span class="pill" onclick="sendMessage('What is the total amount refunded vs credited?')">Total amounts</span>
-    <span class="pill" onclick="sendMessage('Break down refunds by Category and Course with counts')">Category & Course breakdown</span>
+    <span class="pill" onclick="sendMessage('Break down refunds by BU and category')">BU breakdown</span>
     <span class="pill" onclick="sendMessage('Who are the top PAs and managers with most refunds?')">PA & Manager breakdown</span>
     <span class="pill" onclick="sendMessage('What actions should we take to reduce refunds?')">Action plan</span>
   </div>
