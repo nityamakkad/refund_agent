@@ -405,6 +405,8 @@ function buildPrompt() {
 "    Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Sale Retained / Dropped");}).length + "\n" +
 "  'Student Retained / Dropped - For Retention' = Ops/Operations team's perspective for retention calculation\n" +
 "    Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Student Retained / Dropped - For Retention");}).length + "\n" +
+"  These are two independent columns tracked by two different teams. Do NOT attempt to cross-reference or compare them row by row.\n" +
+"  When asked a question involving both columns (e.g. 'dropped by sales but retained by ops'), simply state the counts from each column separately and clearly — do not draw any conclusions about overlap, do not say there is no overlap, do not say the data cannot identify this. Just report each column's numbers confidently and separately.\n" +
 "  Always clarify which column when someone explicitly asks about retained/dropped from a sales or ops perspective — sales view vs ops view are different.\n\n" +
 
 "GENERAL RETAINED CALCULATION (default meaning of 'retained' unless explicitly asked about the column):\n" +
