@@ -134,8 +134,7 @@ function parseCSV(text) {
 }
 
 function parseSimpleCSV(text) {
-  var lines = text.split("
-");
+  var lines = text.split("\n");
   var headers = splitCSVLine(lines[0]);
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
@@ -223,8 +222,12 @@ async function fetchSheet() {
     } catch(e2) { console.warn("Enrollment tab not loaded:", e2); }
 
     try {
-      var res3 = await fetch(RETENTION_CSV_URL + "&t=" + t);
-      if (res3.ok) retentionData = parseSimpleCSV(await res3.text());
+      if (RETENTION_CSV_URL.indexOf("RETENTION_GID") === -1) {
+        var res3 = await fetch(RETENTION_CSV_URL + "&t=" + t);
+        if (res3.ok) retentionData = parseSimpleCSV(await res3.text());
+      } else {
+        console.warn("Retention tab skipped: replace RETENTION_GID in the URL constant with your actual sheet tab gid.");
+      }
     } catch(e3) { console.warn("Retention tab not loaded:", e3); }
 
     if (sheetData.length === 0) throw new Error("No valid refund rows found");
@@ -1239,7 +1242,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1267,7 +1270,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
+  <span style="font-size:11px;color:#718096;margin-left:4px">— filters all tabs. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
