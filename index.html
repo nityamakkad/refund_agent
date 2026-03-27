@@ -57,39 +57,47 @@
 <body>
 
 <script>
-const SHEET_CSV_URL  = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
-const ENROLL_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
+const SHEET_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
+const ENROLL_CSV_URL    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
+// ⚠️ IMPORTANT: Replace RETENTION_GID below with the actual gid of your Retention tab in Google Sheets
+const RETENTION_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=RETENTION_GID&single=true&output=csv";
 
-var sheetData  = [];   // full refund data (all quarters)
-var enrollData = [];   // full enrollment data (all quarters)
+var sheetData     = [];   // full refund data (all quarters)
+var enrollData    = [];   // full enrollment data (all quarters)
+var retentionData = [];   // full retention data
 var messages   = [];
 var charts     = {};
 
 // Active filter state
 var activeFilterQ = "all";  // e.g. "Q1", "Q2", "Q3", "Q4", "all"
-var activeFilterY = "2025"; // e.g. "2025", "all"
+var activeFilterY = "all";  // e.g. "2025", "all"
+var activeFilterM = "all";  // e.g. "January", "all"
 
 // Returns filtered refund data based on active quarter/year filter
 function filteredRefunds() {
-  if (activeFilterQ === "all" && activeFilterY === "all") return sheetData;
   return sheetData.filter(function(r) {
-    var q = get(r, "Quarter");
-    var y = get(r, "Year");
-    var qMatch = activeFilterQ === "all" || q === activeFilterQ;
-    var yMatch = activeFilterY === "all" || y === activeFilterY;
-    return qMatch && yMatch;
+    var qMatch = activeFilterQ === "all" || get(r,"Quarter") === activeFilterQ;
+    var yMatch = activeFilterY === "all" || get(r,"Year")    === activeFilterY;
+    var mMatch = activeFilterM === "all" || get(r,"Refund Month") === activeFilterM;
+    return qMatch && yMatch && mMatch;
   });
 }
 
-// Returns filtered enrollment data based on active quarter/year filter
 function filteredEnrollments() {
-  if (activeFilterQ === "all" && activeFilterY === "all") return enrollData;
   return enrollData.filter(function(r) {
-    var q = get(r, "Quarter");
-    var y = get(r, "Year");
-    var qMatch = activeFilterQ === "all" || q === activeFilterQ;
-    var yMatch = activeFilterY === "all" || y === activeFilterY;
-    return qMatch && yMatch;
+    var qMatch = activeFilterQ === "all" || get(r,"Quarter")          === activeFilterQ;
+    var yMatch = activeFilterY === "all" || get(r,"Year")             === activeFilterY;
+    var mMatch = activeFilterM === "all" || get(r,"Enrollment Month") === activeFilterM;
+    return qMatch && yMatch && mMatch;
+  });
+}
+
+function filteredRetention() {
+  return retentionData.filter(function(r) {
+    var qMatch = activeFilterQ === "all" || get(r,"Quarter") === activeFilterQ;
+    var yMatch = activeFilterY === "all" || get(r,"Year")    === activeFilterY;
+    var mMatch = activeFilterM === "all" || get(r,"Month")   === activeFilterM;
+    return qMatch && yMatch && mMatch;
   });
 }
 
@@ -121,6 +129,22 @@ function parseCSV(text) {
     var hasInvoice = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
     var hasIdentifier = hasEmail || hasName || hasHubspot || hasInvoice;
     if ((hasQuarter || hasYear) && hasIdentifier) rows.push(obj);
+  }
+  return rows;
+}
+
+function parseSimpleCSV(text) {
+  var lines = text.split("
+");
+  var headers = splitCSVLine(lines[0]);
+  var rows = [];
+  for (var i = 1; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+    var vals = splitCSVLine(line);
+    var obj = {};
+    headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || "").trim(); });
+    if (obj["Quarter"] || obj["Month"] || obj["Program Type"]) rows.push(obj);
   }
   return rows;
 }
@@ -198,14 +222,18 @@ async function fetchSheet() {
       if (res2.ok) enrollData = parseEnrollCSV(await res2.text());
     } catch(e2) { console.warn("Enrollment tab not loaded:", e2); }
 
+    try {
+      var res3 = await fetch(RETENTION_CSV_URL + "&t=" + t);
+      if (res3.ok) retentionData = parseSimpleCSV(await res3.text());
+    } catch(e3) { console.warn("Retention tab not loaded:", e3); }
+
     if (sheetData.length === 0) throw new Error("No valid refund rows found");
 
     populateFilterDropdowns();
     updateStats();
     renderCharts();
     renderFlexipay();
-    renderRetention();
-    showToast("Loaded — " + sheetData.length + " refunds, " + enrollData.length + " enrollments", false);
+    showToast("Loaded — " + sheetData.length + " refunds · " + enrollData.length + " enrollments · " + retentionData.length + " retention records", false);
   } catch(e) {
     console.error("Sheet error:", e);
     showToast("Could not load: " + e.message, true);
@@ -215,47 +243,55 @@ async function fetchSheet() {
 
 // FILTER DROPDOWNS
 function populateFilterDropdowns() {
-  var quarters = {};
-  var years    = {};
-  sheetData.forEach(function(r) {
-    var q = get(r,"Quarter"); var y = get(r,"Year");
-    if (q) quarters[q] = true;
-    if (y) years[y] = true;
-  });
-  enrollData.forEach(function(r) {
-    var q = get(r,"Quarter"); var y = get(r,"Year");
-    if (q) quarters[q] = true;
-    if (y) years[y] = true;
-  });
+  var quarters = {}, years = {}, months = {};
+  var monthOrder = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+
+  function addQYM(r, mField) {
+    var q=get(r,"Quarter"), y=get(r,"Year"), m=get(r,mField);
+    if (q) quarters[q]=true;
+    if (y) years[y]=true;
+    if (m && monthOrder.indexOf(m) !== -1) months[m]=true;
+  }
+
+  sheetData.forEach(function(r){ addQYM(r,"Refund Month"); });
+  enrollData.forEach(function(r){ addQYM(r,"Enrollment Month"); });
+  retentionData.forEach(function(r){ addQYM(r,"Month"); });
 
   var qSel = document.getElementById("filterQ");
   var ySel = document.getElementById("filterY");
-  if (!qSel || !ySel) return;
+  var mSel = document.getElementById("filterM");
+  if (!qSel || !ySel || !mSel) return;
 
   var sortedQ = Object.keys(quarters).sort();
   var sortedY = Object.keys(years).sort();
+  var sortedM = monthOrder.filter(function(m){ return months[m]; });
 
   qSel.innerHTML = '<option value="all">All Quarters</option>' +
     sortedQ.map(function(q){ return '<option value="'+q+'">'+q+'</option>'; }).join('');
   ySel.innerHTML = '<option value="all">All Years</option>' +
     sortedY.map(function(y){ return '<option value="'+y+'">'+y+'</option>'; }).join('');
+  mSel.innerHTML = '<option value="all">All Months</option>' +
+    sortedM.map(function(m){ return '<option value="'+m+'">'+m+'</option>'; }).join('');
 }
 
 function applyFilter() {
   var qSel = document.getElementById("filterQ");
   var ySel = document.getElementById("filterY");
+  var mSel = document.getElementById("filterM");
   activeFilterQ = qSel ? qSel.value : "all";
   activeFilterY = ySel ? ySel.value : "all";
+  activeFilterM = mSel ? mSel.value : "all";
 
   var badge = document.getElementById("filterBadge");
   if (badge) {
-    if (activeFilterQ === "all" && activeFilterY === "all") {
+    var label = [];
+    if (activeFilterQ !== "all") label.push(activeFilterQ);
+    if (activeFilterY !== "all") label.push(activeFilterY);
+    if (activeFilterM !== "all") label.push(activeFilterM);
+    if (label.length === 0) {
       badge.style.display = "none";
     } else {
-      var label = [];
-      if (activeFilterQ !== "all") label.push(activeFilterQ);
-      if (activeFilterY !== "all") label.push(activeFilterY);
-      badge.textContent = "Filtered: " + label.join(" ");
+      badge.textContent = "Filtered: " + label.join(" · ");
       badge.style.display = "inline-block";
     }
   }
@@ -965,52 +1001,41 @@ function renderFlexipay() {
 var retentionState = null;
 
 function initRetentionState() {
-  if (retentionState) return; // only init once
+  if (retentionState) return;
 
-  // All statuses from data
+  // All possible Current Payment Status values from retention tab
   var allStatuses = [
-    "Dispute Lost","Dispute Lost - Pre Q4 Lead","Dropped Out","Flexipay Drop",
-    "Flexipay Refunded","Flexipay_Dispute Lost","Flexipay_has_time_to_pay","Fully Paid",
-    "GPM Refund","Invalid","Invalid Lead","Lost dispute","Not to be Counted",
-    "Ongoing Discussion","PA Mis-Sell","PE from prev. Q - Dropped in Q4",
-    "PE from prev. Q - Fully Paid in Q4","Potential Drop","Potential Error",
-    "Potential Error from Q3","Pre Q4 Refund","Proactive Refund","Refunded",
-    "Refunded/Dropped in Prev. Q - Fully paid in Q4","Unpaid Move","has_time_to_pay"
+    "Dispute Lost","Dispute Lost - Pre Q3","Dropped Out","Flexipay Drop",
+    "Flexipay Refunded","Flexipay_has_time_to_pay","Fully Paid","Invalid Lead",
+    "PA Mis-sell","PE from PQ - Dropped out in Q3","PE from PQ - Fully Paid in Q3",
+    "Potential Error","Pre Q3 Refund","Proactive Refund","Q1 Drop - Fully Paid in Q3","Refunded"
   ];
 
-  // Denominator: exclude Not to be Counted, Invalid, Invalid Lead by default
-  var denomExcluded = ["Not to be Counted","Invalid","Invalid Lead"];
+  // Denominator: exclude Invalid Lead, PA Mis-sell, Potential Error by default
+  var denomExcluded = ["Invalid Lead","PA Mis-sell","Potential Error"];
 
-  // Numerator: exclude PA Mis-Sell and all Flexipay variants by default, start with Fully Paid included
-  var numerExcluded = [
-    "PA Mis-Sell","Flexipay Drop","Flexipay Refunded","Flexipay_Dispute Lost",
-    "Flexipay_has_time_to_pay","Dispute Lost","Dispute Lost - Pre Q4 Lead",
-    "Dropped Out","GPM Refund","Lost dispute","Not to be Counted","Invalid","Invalid Lead",
-    "Ongoing Discussion","PE from prev. Q - Dropped in Q4","Potential Drop",
-    "Potential Error","Potential Error from Q3","Pre Q4 Refund","Proactive Refund",
-    "Refunded","Refunded/Dropped in Prev. Q - Fully paid in Q4","Unpaid Move"
-  ];
+  // Numerator: include only Fully Paid and Flexipay_has_time_to_pay by default
+  var numerIncluded = ["Fully Paid","Flexipay_has_time_to_pay"];
+  var numerExcluded = allStatuses.filter(function(s){ return numerIncluded.indexOf(s) === -1; });
 
   retentionState = {
     allStatuses: allStatuses,
     denomIncluded: allStatuses.filter(function(s){ return denomExcluded.indexOf(s) === -1; }),
     denomExcluded: denomExcluded,
-    numerIncluded: allStatuses.filter(function(s){ return numerExcluded.indexOf(s) === -1; }),
+    numerIncluded: numerIncluded,
     numerExcluded: numerExcluded
   };
 }
 
 function moveStatus(type, direction, status) {
-  // type = "denom" or "numer", direction = "include" or "exclude"
   var inc = type === "denom" ? retentionState.denomIncluded : retentionState.numerIncluded;
   var exc = type === "denom" ? retentionState.denomExcluded : retentionState.numerExcluded;
-
   if (direction === "exclude") {
     var idx = inc.indexOf(status);
-    if (idx > -1) { inc.splice(idx, 1); exc.push(status); exc.sort(); }
+    if (idx > -1) { inc.splice(idx,1); exc.push(status); exc.sort(); }
   } else {
     var idx = exc.indexOf(status);
-    if (idx > -1) { exc.splice(idx, 1); inc.push(status); inc.sort(); }
+    if (idx > -1) { exc.splice(idx,1); inc.push(status); inc.sort(); }
   }
   renderRetention();
 }
@@ -1018,158 +1043,151 @@ function moveStatus(type, direction, status) {
 // RETENTION PIVOT TABLE
 function renderRetention() {
   initRetentionState();
-  var fe = filteredEnrollments();
+  var fd = filteredRetention();
   var st = retentionState;
 
-  // Get program types from filtered data
-  var ptSeen = {};
-  var programTypes = [];
-  fe.forEach(function(r) {
-    var pt = get(r,"Program Type");
-    if (pt && !ptSeen[pt]) { ptSeen[pt]=true; programTypes.push(pt); }
-  });
-  programTypes.sort();
-
-  // Build counts per program type per status
-  var counts = {}; // counts[pt][ls] = n
-  programTypes.forEach(function(pt){ counts[pt]={}; });
-  fe.forEach(function(r) {
-    var pt=get(r,"Program Type"), ls=get(r,"Live Status");
-    if (!pt || !ls) return;
-    if (!counts[pt]) counts[pt]={};
-    counts[pt][ls] = (counts[pt][ls]||0)+1;
-  });
-
-  // Calculate per program type
-  function sumStatuses(pt, statuses) {
-    return statuses.reduce(function(s,ls){ return s+(counts[pt][ls]||0); }, 0);
-  }
-
-  // Grand totals row
-  var grandDenom=0, grandNumer=0;
-  var ptData = programTypes.map(function(pt) {
-    var grandTotal = fe.filter(function(r){return get(r,"Program Type")===pt;}).length;
-    var denom = sumStatuses(pt, st.denomIncluded);
-    var numer = sumStatuses(pt, st.numerIncluded);
-    var pct   = denom > 0 ? (numer/denom*100).toFixed(1) : "—";
-    grandDenom += denom; grandNumer += numer;
-    return { pt:pt, grandTotal:grandTotal, denom:denom, numer:numer, pct:pct };
-  });
-  var grandPct = grandDenom > 0 ? (grandNumer/grandDenom*100).toFixed(1) : "—";
-
   function pctColor(p) {
-    var v = parseFloat(p);
-    if (isNaN(v)) return "#94a3b8";
-    if (v >= 90) return "#059669";
-    if (v >= 80) return "#b45309";
-    return "#dc2626";
+    var v=parseFloat(p); if(isNaN(v)) return "#94a3b8";
+    return v>=90?"#059669":v>=80?"#b45309":"#dc2626";
   }
   function pctBg(p) {
-    var v = parseFloat(p);
-    if (isNaN(v)) return "#f8fafc";
-    if (v >= 90) return "#dcfce7";
-    if (v >= 80) return "#fef9c3";
-    return "#fee2e2";
+    var v=parseFloat(p); if(isNaN(v)) return "#f8fafc";
+    return v>=90?"#dcfce7":v>=80?"#fef9c3":"#fee2e2";
   }
 
-  // Build status pill
   function pill(type, direction, status) {
-    var bg  = direction === "include" ? "#dbeafe" : "#f1f5f9";
-    var col = direction === "include" ? "#1e40af" : "#64748b";
-    var border = direction === "include" ? "#bfdbfe" : "#e2e8f0";
-    var onclick = "moveStatus('"+type+"','"+( direction==="include"?"exclude":"include" )+"','"+status.replace(/'/g,"\'")+"')";
-    return '<span onclick="'+onclick+'" style="display:inline-flex;align-items:center;background:'+bg+';color:'+col+';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;margin:2px;border:1px solid '+border+'" title="Click to move/remove">'+
-      status+'</span>';
+    var bg     = direction==="include"?"#dbeafe":"#f1f5f9";
+    var col    = direction==="include"?"#1e40af":"#64748b";
+    var border = direction==="include"?"#bfdbfe":"#e2e8f0";
+    var onclick= "moveStatus('"+type+"','"+(direction==="include"?"exclude":"include")+"','"+status.replace(/'/g,"\'")+"')";
+    return '<span onclick="'+onclick+'" style="display:inline-flex;align-items:center;background:'+bg+';color:'+col+';border-radius:20px;padding:3px 10px;font-size:10px;font-weight:600;cursor:pointer;margin:2px;border:1px solid '+border+'" title="Click to move">'+status+'</span>';
   }
 
-  // Summary cards
-  var overallPct = grandDenom > 0 ? (grandNumer/grandDenom*100).toFixed(1) : "0";
-  var summaryHtml =
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">'+
-    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
-      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Total Enrollments</div>'+
-      '<div style="font-size:26px;font-weight:700;color:#1a56db;margin-top:4px">'+fe.length+'</div></div>'+
-    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
-      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Net Base (Denominator)</div>'+
-      '<div style="font-size:26px;font-weight:700;color:#475569;margin-top:4px">'+grandDenom+'</div></div>'+
-    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
-      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Retained (Numerator)</div>'+
-      '<div style="font-size:26px;font-weight:700;color:#1d4ed8;margin-top:4px">'+grandNumer+'</div></div>'+
-    '<div style="background:'+pctBg(overallPct)+';border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px">'+
-      '<div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Overall Retention %</div>'+
-      '<div style="font-size:26px;font-weight:700;color:'+pctColor(overallPct)+';margin-top:4px">'+overallPct+'%</div>'+
-      '<div style="font-size:10px;color:#94a3b8;margin-top:2px">Numerator ÷ Denominator</div></div>'+
-    '</div>';
-
-  // Controls panel
+  // ── Controls ──
   var controlsHtml =
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px">'+
-
-    // DENOMINATOR CONTROL
     '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">'+
       '<div style="font-size:11px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚖️ Denominator (Net Base)</div>'+
-      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included statuses <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomIncluded.length+'</span></div>'+
-      '<div style="max-height:120px;overflow-y:auto;margin-bottom:8px">'+
-        st.denomIncluded.map(function(s){ return pill("denom","include",s); }).join('')+
-      '</div>'+
-      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded statuses <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomExcluded.length+'</span></div>'+
-      '<div style="max-height:80px;overflow-y:auto">'+
-        st.denomExcluded.map(function(s){ return pill("denom","exclude",s); }).join('')+
-      '</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomIncluded.length+'</span></div>'+
+      '<div style="max-height:110px;overflow-y:auto;margin-bottom:8px">'+st.denomIncluded.map(function(s){return pill("denom","include",s);}).join('')+'</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.denomExcluded.length+'</span></div>'+
+      '<div style="max-height:80px;overflow-y:auto">'+st.denomExcluded.map(function(s){return pill("denom","exclude",s);}).join('')+'</div>'+
     '</div>'+
-
-    // NUMERATOR CONTROL
     '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:14px">'+
       '<div style="font-size:11px;font-weight:700;color:#1d4ed8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">🎯 Numerator (Retained)</div>'+
-      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included statuses <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerIncluded.length+'</span></div>'+
-      '<div style="max-height:120px;overflow-y:auto;margin-bottom:8px">'+
-        st.numerIncluded.map(function(s){ return pill("numer","include",s); }).join('')+
-      '</div>'+
-      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded statuses <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerExcluded.length+'</span></div>'+
-      '<div style="max-height:80px;overflow-y:auto">'+
-        st.numerExcluded.map(function(s){ return pill("numer","exclude",s); }).join('')+
-      '</div>'+
-    '</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px">Included <span style="background:#dbeafe;color:#1e40af;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerIncluded.length+'</span></div>'+
+      '<div style="max-height:110px;overflow-y:auto;margin-bottom:8px">'+st.numerIncluded.map(function(s){return pill("numer","include",s);}).join('')+'</div>'+
+      '<div style="font-size:10px;color:#64748b;margin-bottom:6px;border-top:1px solid #f1f5f9;padding-top:6px">Excluded <span style="background:#f1f5f9;color:#64748b;border-radius:4px;padding:1px 6px;font-weight:700">'+st.numerExcluded.length+'</span></div>'+
+      '<div style="max-height:80px;overflow-y:auto">'+st.numerExcluded.map(function(s){return pill("numer","exclude",s);}).join('')+'</div>'+
+    '</div></div>';
+
+  // ── Pivot builder ──
+  function buildPivot(colField, colLabel) {
+    var cols = [], colSeen = {};
+    fd.forEach(function(r){ var v=get(r,colField); if(v&&!colSeen[v]){colSeen[v]=true;cols.push(v);} });
+    cols.sort();
+
+    var pivot={}, rowTotals={}, colDenom={}, colNumer={};
+    cols.forEach(function(c){ colDenom[c]=0; colNumer[c]=0; });
+
+    // Get all unique statuses in filtered data
+    var statusSeen={}, statuses=[];
+    fd.forEach(function(r){ var s=get(r,"Current Payment Status"); if(s&&!statusSeen[s]){statusSeen[s]=true;statuses.push(s);} });
+    statuses.sort();
+
+    statuses.forEach(function(s){ pivot[s]={}; rowTotals[s]=0; });
+
+    fd.forEach(function(r){
+      var col=get(r,colField), status=get(r,"Current Payment Status");
+      if(!col||!status) return;
+      pivot[status][col]=(pivot[status][col]||0)+1;
+      rowTotals[status]=(rowTotals[status]||0)+1;
+      if(st.denomIncluded.indexOf(status)!==-1) colDenom[col]=(colDenom[col]||0)+1;
+      if(st.numerIncluded.indexOf(status)!==-1) colNumer[col]=(colNumer[col]||0)+1;
+    });
+
+    var grandDenom=st.denomIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
+    var grandNumer=st.numerIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
+    var grandPct=grandDenom>0?(grandNumer/grandDenom*100).toFixed(1):"—";
+
+    var minW=200+cols.length*100;
+    var html=
+      '<div style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0;margin-bottom:20px">'+
+      '<table style="width:100%;border-collapse:collapse;font-size:11px;min-width:'+minW+'px">'+
+      '<thead>'+
+      '<tr style="background:#1a1040">'+
+      '<th style="padding:10px 14px;text-align:left;color:#fff;font-size:11px;font-weight:700;position:sticky;left:0;z-index:2;min-width:200px;white-space:nowrap;background:#1a1040">Current Payment Status \ '+colLabel+'</th>'+
+      cols.map(function(c){return '<th style="padding:8px 6px;text-align:center;color:#fff;font-size:10px;font-weight:600;white-space:nowrap;min-width:90px">'+c+'</th>';}).join('')+
+      '<th style="padding:8px 10px;text-align:center;color:#a78bfa;font-size:11px;font-weight:700;white-space:nowrap">Row Total</th>'+
+      '</tr>'+
+      '</thead><tbody>'+
+      statuses.map(function(s,i){
+        var isNumer=st.numerIncluded.indexOf(s)!==-1;
+        var isDenom=st.denomIncluded.indexOf(s)!==-1;
+        var rowBg=isNumer?"#f0fdf4":isDenom?"#fff":"#fef2f2";
+        var labelStyle=isNumer?"color:#059669;font-weight:700":isDenom?"color:#1e293b;font-weight:600":"color:#94a3b8;font-weight:400";
+        return '<tr style="background:'+rowBg+'">'+
+          '<td style="padding:9px 14px;font-size:11px;'+labelStyle+';position:sticky;left:0;z-index:1;border-bottom:1px solid #e2e8f0;white-space:nowrap;background:'+rowBg+'">'+s+'</td>'+
+          cols.map(function(c){var v=pivot[s][c]||0;return '<td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e2e8f0;color:'+(v?"#1e293b":"#cbd5e0")+';font-weight:'+(v?"600":"400")+'">'+(v||"—")+'</td>';}).join('')+
+          '<td style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;background:#f8fafc;border-bottom:1px solid #e2e8f0">'+(rowTotals[s]||0)+'</td>'+
+          '</tr>';
+      }).join('')+
+      // Denominator row
+      '<tr style="background:#fef9c3;border-top:2px solid #fbbf24">'+
+      '<td style="padding:9px 14px;font-weight:700;font-size:11px;color:#b45309;position:sticky;left:0;z-index:1;background:#fef9c3;white-space:nowrap">⚖️ Net Base (Denom)</td>'+
+      cols.map(function(c){return '<td style="padding:8px 6px;text-align:center;font-weight:700;color:#b45309">'+(colDenom[c]||0)+'</td>';}).join('')+
+      '<td style="padding:8px 10px;text-align:center;font-weight:700;color:#b45309;background:#fef9c3">'+grandDenom+'</td></tr>'+
+      // Numerator row
+      '<tr style="background:#dcfce7;border-top:1px solid #86efac">'+
+      '<td style="padding:9px 14px;font-weight:700;font-size:11px;color:#059669;position:sticky;left:0;z-index:1;background:#dcfce7;white-space:nowrap">🎯 Numerator (Retained)</td>'+
+      cols.map(function(c){return '<td style="padding:8px 6px;text-align:center;font-weight:700;color:#059669">'+(colNumer[c]||0)+'</td>';}).join('')+
+      '<td style="padding:8px 10px;text-align:center;font-weight:700;color:#059669;background:#dcfce7">'+grandNumer+'</td></tr>'+
+      // Retention % row
+      '<tr style="background:#1a1040">'+
+      '<td style="padding:9px 14px;font-weight:700;font-size:11px;color:#fff;position:sticky;left:0;z-index:1;background:#1a1040;white-space:nowrap">Retention %</td>'+
+      cols.map(function(c){
+        var pct=colDenom[c]>0?(colNumer[c]/colDenom[c]*100).toFixed(1):"—";
+        return '<td style="padding:8px 6px;text-align:center"><span style="background:'+pctBg(pct)+';color:'+pctColor(pct)+';padding:3px 8px;border-radius:12px;font-weight:700;font-size:11px">'+(pct==="—"?"—":pct+"%")+'</span></td>';
+      }).join('')+
+      '<td style="padding:8px 10px;text-align:center"><span style="background:'+pctBg(grandPct)+';color:'+pctColor(grandPct)+';padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px">'+(grandPct==="—"?"—":grandPct+"%")+'</span></td>'+
+      '</tr>'+
+      '</tbody></table></div>';
+    return html;
+  }
+
+  // ── Summary cards ──
+  var totalRet  = fd.length;
+  var grandD    = st.denomIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
+  var grandN    = st.numerIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
+  var overallPct= grandD>0?(grandN/grandD*100).toFixed(1):"0";
+
+  var summaryHtml=
+    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:16px">'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Total Records</div><div style="font-size:26px;font-weight:700;color:#1a56db;margin-top:4px">'+totalRet+'</div></div>'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Net Base (Denominator)</div><div style="font-size:26px;font-weight:700;color:#b45309;margin-top:4px">'+grandD+'</div></div>'+
+    '<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Retained (Numerator)</div><div style="font-size:26px;font-weight:700;color:#059669;margin-top:4px">'+grandN+'</div></div>'+
+    '<div style="background:'+pctBg(overallPct)+';border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px"><div style="font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase">Overall Retention %</div><div style="font-size:26px;font-weight:700;color:'+pctColor(overallPct)+';margin-top:4px">'+overallPct+'%</div><div style="font-size:10px;color:#94a3b8;margin-top:2px">Numerator ÷ Denominator</div></div>'+
     '</div>';
 
-  // Pivot table
-  var tableHtml =
-    '<div style="overflow-x:auto;border-radius:10px;border:1px solid #e2e8f0">'+
-    '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
-    '<thead>'+
-    '<tr style="background:#1a1040">'+
-    '<th style="padding:11px 14px;text-align:left;color:#fff;font-size:11px;font-weight:700;white-space:nowrap">Program Type</th>'+
-    '<th style="padding:11px 10px;text-align:center;color:#a78bfa;font-size:11px;font-weight:700">Grand Total</th>'+
-    '<th style="padding:11px 10px;text-align:center;color:#fbbf24;font-size:11px;font-weight:700">Net Base<br><span style="font-weight:400;font-size:9px;opacity:.8">Denominator</span></th>'+
-    '<th style="padding:11px 10px;text-align:center;color:#34d399;font-size:11px;font-weight:700">Numerator<br><span style="font-weight:400;font-size:9px;opacity:.8">Retained</span></th>'+
-    '<th style="padding:11px 14px;text-align:center;color:#fff;font-size:11px;font-weight:700">Retention %</th>'+
-    '</tr>'+
-    '</thead>'+
-    '<tbody>'+
-    ptData.map(function(d,i) {
-      return '<tr style="background:'+(i%2===0?"#fff":"#f8fafc")+'">'+
-        '<td style="padding:10px 14px;font-weight:600;color:#1e293b;font-size:12px">'+d.pt+'</td>'+
-        '<td style="padding:10px;text-align:center;color:#475569;font-weight:500">'+d.grandTotal+'</td>'+
-        '<td style="padding:10px;text-align:center;color:#475569;font-weight:600">'+d.denom+'</td>'+
-        '<td style="padding:10px;text-align:center;color:#1d4ed8;font-weight:600">'+d.numer+'</td>'+
-        '<td style="padding:10px 14px;text-align:center">'+
-          '<span style="background:'+pctBg(d.pct)+';color:'+pctColor(d.pct)+';padding:4px 12px;border-radius:20px;font-weight:700;font-size:12px">'+
-          (d.pct==="—"?"—":d.pct+"%")+'</span></td>'+
-        '</tr>';
-    }).join('')+
-    '<tr style="background:#1a1040">'+
-    '<td style="padding:11px 14px;font-weight:700;color:#fff;font-size:12px">Grand Total</td>'+
-    '<td style="padding:11px 10px;text-align:center;color:#a78bfa;font-weight:700">'+fe.length+'</td>'+
-    '<td style="padding:11px 10px;text-align:center;color:#fbbf24;font-weight:700">'+grandDenom+'</td>'+
-    '<td style="padding:11px 10px;text-align:center;color:#34d399;font-weight:700">'+grandNumer+'</td>'+
-    '<td style="padding:11px 14px;text-align:center">'+
-      '<span style="background:'+pctBg(grandPct)+';color:'+pctColor(grandPct)+';padding:4px 12px;border-radius:20px;font-weight:700;font-size:13px">'+
-      (grandPct==="—"?"—":grandPct+"%")+'</span></td>'+
-    '</tr>'+
-    '</tbody></table></div>';
+  // ── Legend ──
+  var legendHtml = '<div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;font-size:11px">'+
+    '<span style="background:#dcfce7;color:#059669;padding:3px 10px;border-radius:6px;font-weight:600">🟢 In Numerator</span>'+
+    '<span style="background:#fff;border:1px solid #e2e8f0;color:#475569;padding:3px 10px;border-radius:6px;font-weight:600">In Denominator only</span>'+
+    '<span style="background:#fef2f2;color:#94a3b8;padding:3px 10px;border-radius:6px;font-weight:600">🔴 Excluded from both</span>'+
+    '</div>';
+
+  // ── Section headers + 3 pivot tables ──
+  var pivotHtml =
+    legendHtml+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">📊 Pivot 1 — by Program Type</h4>'+
+    buildPivot("Program Type","Program Type")+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">👤 Pivot 2 — by Current SSA</h4>'+
+    buildPivot("Current SSA","Current SSA")+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">💳 Pivot 3 — by Payment Mode</h4>'+
+    buildPivot("Payment Mode","Payment Mode");
 
   var container = document.getElementById("retentionPivot");
-  if (container) container.innerHTML = summaryHtml + controlsHtml + tableHtml;
+  if (container) container.innerHTML = summaryHtml + controlsHtml + pivotHtml;
 }
 
 // TAB SWITCH
@@ -1200,7 +1218,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1224,8 +1242,11 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   <select id="filterY" onchange="applyFilter()">
     <option value="all">All Years</option>
   </select>
+  <select id="filterM" onchange="applyFilter()">
+    <option value="all">All Months</option>
+  </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
+  <span style="font-size:11px;color:#718096;margin-left:4px">— filters all tabs. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
