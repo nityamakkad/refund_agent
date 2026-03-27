@@ -344,7 +344,8 @@ function buildPrompt() {
 "3. If a question cannot be answered from the data, say so clearly.\n" +
 "4. All counts and figures you quote must come from the data summary below — not from assumptions.\n\n" +
 
-"BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n\n" +
+"BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n" +
+"  Known blanks in Retention tab: Candidate ID=42 | Contact No.=45 | Time Zone=59 | Status=40 | payment_status=40 | Hubspot ID=1331 (Hubspot ID is mostly blank in retention tab — use Email or Name to identify learners instead).\n\n" +
 
 "OVERLAPPING COLUMNS RULE: Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH tabs.\n" +
 "  DEPOSIT / RECEIPT DATE SPECIFICALLY:\n" +
@@ -521,6 +522,26 @@ function buildPrompt() {
 
 "SAMPLE RECORDS (first 8 rows for reference):\n" + sampleRecords + "\n" +
 (sheetData.length > 8 ? "...and " + (sheetData.length - 8) + " more records\n\n" : "\n") +
+
+"CROSS-TAB LEARNER IDENTIFICATION — VERY IMPORTANT:\n" +
+"  A learner can be identified across tabs using ANY of these 3 identifiers (some learners may have only one):\n" +
+"    1. Email — most reliable. Present in all tabs. Use case-insensitive matching.\n" +
+"    2. Name — present in all tabs but some are PI-encrypted (v1:...) in refunds tab. Use fuzzy/case-insensitive matching.\n" +
+"    3. Hubspot ID — present in refunds and enrollments tabs. Mostly blank in retention tab.\n" +
+"  Always try email first, then name, then Hubspot ID. If two match, treat as the same learner.\n\n" +
+
+"CROSS-TAB ANALYSIS CAPABILITY:\n" +
+"  You CAN answer questions that require matching learners across the Refunds and Enrollments tabs.\n" +
+"  Example: 'Find learners who refunded in Q1 but re-enrolled in any quarter'\n" +
+"    Method: Match email/name from Q1 refunds against enrollments. If same email appears in enrollments in a LATER quarter than Q1, that is a re-enrollment.\n" +
+"    IMPORTANT: If a learner appears in both Q1 refunds AND Q1 enrollments with the same email, that is the SAME enrollment event — not a re-enrollment. Re-enrollment = appears in a DIFFERENT (later) quarter in enrollments.\n" +
+"  Known cross-tab findings (Q1 refunds vs all enrollments):\n" +
+"    Total Q1 refunds: 100 | Matched by email to any enrollment: 79\n" +
+"    Of those 79 matches: 75 are same-quarter Q1 matches (same enrollment, not re-enrollment)\n" +
+"    Genuine re-enrollments (later quarter): Q2=2 learners, Q3=1 learner, Q4=1 learner = 4 total\n" +
+"    Re-enrolled learners: Sandeep Ayloo (Q2), Jyothsna Jonnakuti (Q2), Rahul Jain (Q3), Faizal Ali Mir (Q4)\n" +
+"  This same logic applies for any quarter — match refund email against enrollment email across quarters.\n" +
+"  NEVER say the data does not allow cross-tab learner tracking — it does, via email matching.\n\n"
 
 // ─────────────────────────────────────────────
 // ENROLLMENTS TAB — FULL DATA SUMMARY
@@ -1218,7 +1239,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1246,7 +1267,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px">— filters all tabs. Chat is independent.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
 </div>
 
 <!-- STAT BAR -->
