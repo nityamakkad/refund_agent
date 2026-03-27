@@ -101,7 +101,7 @@ function filteredRetention() {
   });
 }
 
-// CSV PARSER — handles multi-line quoted fields
+// CSV PARSER  -  handles multi-line quoted fields
 function parseCSV(text) {
   var cleaned = [];
   var inQ = false;
@@ -236,7 +236,7 @@ async function fetchSheet() {
     updateStats();
     renderCharts();
     renderFlexipay();
-    showToast("Loaded — " + sheetData.length + " refunds · " + enrollData.length + " enrollments · " + retentionData.length + " retention records", false);
+    showToast("Loaded  -  " + sheetData.length + " refunds · " + enrollData.length + " enrollments · " + retentionData.length + " retention records", false);
   } catch(e) {
     console.error("Sheet error:", e);
     showToast("Could not load: " + e.message, true);
@@ -329,12 +329,12 @@ function buildPrompt() {
 // ─────────────────────────────────────────────
 "You are an expert EdTech Data Analyst AI for an online education company. You answer questions STRICTLY based on the live data provided below. Never make up numbers, trends, or facts.\n\n" +
 
-"RESPONSE STYLE RULES — VERY IMPORTANT:\n" +
+"RESPONSE STYLE RULES  -  VERY IMPORTANT:\n" +
 "1. BE CONCISE. Managers and ops teams are busy. Give the numbers directly, no long explanations unless asked.\n" +
-"2. NEVER start a response with 'Based on the data' or 'In the data provided' — go straight to the answer.\n" +
+"2. NEVER start a response with 'Based on the data' or 'In the data provided'  -  go straight to the answer.\n" +
 "3. NEVER add paragraph-long explanations about why two columns can't be cross-referenced. Just give the numbers from each column on separate lines.\n" +
-"4. NEVER say 'there is no overlap', 'the data does not provide', 'cannot be identified' — these are unhelpful filler lines. Remove them entirely.\n" +
-"5. If you have given the numbers, that IS the answer. End with one short follow-up line like 'Let me know if you'd like a further breakdown.' — nothing more.\n" +
+"4. NEVER say 'there is no overlap', 'the data does not provide', 'cannot be identified'  -  these are unhelpful filler lines. Remove them entirely.\n" +
+"5. If you have given the numbers, that IS the answer. End with one short follow-up line like 'Let me know if you'd like a further breakdown.'  -  nothing more.\n" +
 "6. Ideal response format for column count questions:\n" +
 "   Sale Retained / Dropped (Sales view): Dropped = 493 | Blank = 29\n" +
 "   Student Retained / Dropped - For Retention (Ops view): Dropped = 481 | Retained = 12 | Blank = 29\n" +
@@ -345,16 +345,16 @@ function buildPrompt() {
 "   Example: If user says 'there are 300 refunds' but data shows 522, respond: 'Based on the data the total refunds are 522, not 300.'\n" +
 "2. NEVER invent reasons, trends, or insights not supported by the data columns provided.\n" +
 "3. If a question cannot be answered from the data, say so clearly.\n" +
-"4. All counts and figures you quote must come from the data summary below — not from assumptions.\n\n" +
+"4. All counts and figures you quote must come from the data summary below  -  not from assumptions.\n\n" +
 
 "BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n" +
-"  Known blanks in Retention tab: Candidate ID=42 | Contact No.=45 | Time Zone=59 | Status=40 | payment_status=40 | Hubspot ID=1331 (Hubspot ID is mostly blank in retention tab — use Email or Name to identify learners instead).\n\n" +
+"  Known blanks in Retention tab: Candidate ID=42 | Contact No.=45 | Time Zone=59 | Status=40 | payment_status=40 | Hubspot ID=1331 (Hubspot ID is mostly blank in retention tab  -  use Email or Name to identify learners instead).\n\n" +
 
 "OVERLAPPING COLUMNS RULE: Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH tabs.\n" +
 "  DEPOSIT / RECEIPT DATE SPECIFICALLY:\n" +
 "    In Refunds tab: column is called 'Date of Receipt' = date learner paid their first deposit\n" +
 "    In Enrollments tab: column is called 'Deposit Paid Date' = same meaning, date learner paid first deposit\n" +
-"    These mean the same thing but are in different tabs. If someone asks 'how many learners paid first deposit in January' or 'how many paid deposit in January' — this is AMBIGUOUS. ALWAYS ask: do you mean from the Refunds tab or the Enrollments tab?\n" +
+"    These mean the same thing but are in different tabs. If someone asks 'how many learners paid first deposit in January' or 'how many paid deposit in January'  -  this is AMBIGUOUS. ALWAYS ask: do you mean from the Refunds tab or the Enrollments tab?\n" +
 "    If they clarify Refunds tab: extract month from 'Date of Receipt' column (format MM/DD/YYYY) by checking if month part = 1 for January, 2 for February etc. January 2025 from Refunds tab = 31 learners, January all years = 32.\n" +
 "    If they clarify Enrollments tab: use 'Enrollment Month' or 'Enrollment Month and Year' column directly.\n" +
 "  For other overlapping columns (Payment Mode, Payment Category): ask which tab if genuinely ambiguous.\n\n" +
@@ -364,46 +364,46 @@ function buildPrompt() {
 "Use 'pie' instead of 'bar' for proportional breakdowns.\n\n" +
 
 // ─────────────────────────────────────────────
-// REFUNDS TAB — FULL DATA SUMMARY
+// REFUNDS TAB  -  FULL DATA SUMMARY
 // ─────────────────────────────────────────────
-"=== REFUNDS TAB (Live Data — Q1 to Q4 2025) ===\n" +
+"=== REFUNDS TAB (Live Data  -  Q1 to Q4 2025) ===\n" +
 "Total Refund Records: " + total + "\n" +
 "Total Amount Credited (paid by learners): $" + credited.toLocaleString() + "\n" +
 "Total Net Revenue: $" + netRev.toLocaleString() + "\n" +
 "Total Amount Refunded: $" + refunded.toLocaleString() + "\n\n" +
 
-"REFUNDS BY QUARTER & YEAR (source of truth for refund counts — use Quarter+Year together):\n" +
+"REFUNDS BY QUARTER & YEAR (source of truth for refund counts  -  use Quarter+Year together):\n" +
 (function(){
   var qy={};
   sheetData.forEach(function(r){ var q=get(r,"Quarter"); var y=get(r,"Year"); if(q&&y){var k=q+" "+y; qy[k]=(qy[k]||0)+1;} });
   return Object.entries(qy).sort().map(function(e){ return "  "+e[0]+": "+e[1]+" refunds"; }).join("\n");
 })() + "\n" +
-"NOTE: Use Quarter+Year together for refund counts. Some rows may have missing email/name/Hubspot ID — always use Quarter+Year as the primary count basis. Always state the exact count from this data and do not adjust if someone gives you a different number.\n\n" +
+"NOTE: Use Quarter+Year together for refund counts. Some rows may have missing email/name/Hubspot ID  -  always use Quarter+Year as the primary count basis. Always state the exact count from this data and do not adjust if someone gives you a different number.\n\n" +
 
 // ─── LEARNER IDENTITY ───
 "LEARNER IDENTITY COLUMNS:\n" +
 "  Hubspot ID: Internal CRM identifier for the learner\n" +
-"  Email id: Learner's email address — some may be blank\n" +
-"  Name: Learner full name — some names are PI-encrypted (start with 'v1:'), use Hubspot ID in those cases\n" +
+"  Email id: Learner's email address  -  some may be blank\n" +
+"  Name: Learner full name  -  some names are PI-encrypted (start with 'v1:'), use Hubspot ID in those cases\n" +
 "  Count: Number of programs the learner is enrolled in (1, 2, or 3)\n" +
 "  New / Alumni: New=" + countVal("New / Alumni","new") + " | Alumni=" + countVal("New / Alumni","alumni") + " | Blank=" + sheetData.filter(function(r){return !get(r,"New / Alumni");}).length + "\n\n" +
 
 // ─── DATES ───
-"DATE COLUMNS — ALL EXPLAINED:\n" +
+"DATE COLUMNS  -  ALL EXPLAINED:\n" +
 "  Date of Receipt: Date learner paid their deposit (format MM/DD/YYYY). All " + total + " rows filled.\n" +
-"    Monthly breakdown (extracted from Date of Receipt — 2025 only):\n" +
+"    Monthly breakdown (extracted from Date of Receipt  -  2025 only):\n" +
 "    January=31 | February=33 | March=55 | April=23 | May=22 | June=37 | July=56 | August=71 | September=69 | October=33 | November=31 | December=19\n" +
-"    NOTE: Date of Receipt is the deposit date — it is DIFFERENT from Refund Month. A learner may have paid deposit in January but got refunded in July. Use the correct column based on what is being asked.\n" +
+"    NOTE: Date of Receipt is the deposit date  -  it is DIFFERENT from Refund Month. A learner may have paid deposit in January but got refunded in July. Use the correct column based on what is being asked.\n" +
 "  Cohort: Name/label of the learner's cohort\n" +
 "  Cohort Start Date: Date when the cohort officially started (most filled, some blank = not yet started or not recorded)\n" +
-"  Orientation Date: Date learner attended orientation — blank means not attended or not yet recorded\n" +
-"  First Class Date: Date of learner's first live class — blank means not attended or not yet recorded\n" +
-"  Refund Request Date by learner: Date the LEARNER first raised the refund request with the OPS team — this is when the learner asked for a refund\n" +
-"  Request Date: Date the OPS team internally forwarded/raised the refund request to the FINANCE team — this is an internal ops step, different from when the learner asked\n" +
-"  Refund Date: Date the refund was actually processed and issued from the company's end to the learner — this is the final execution date\n\n" +
-"  Refund Month / Refund Month and Year — CRITICAL RULE:\n" +
+"  Orientation Date: Date learner attended orientation  -  blank means not attended or not yet recorded\n" +
+"  First Class Date: Date of learner's first live class  -  blank means not attended or not yet recorded\n" +
+"  Refund Request Date by learner: Date the LEARNER first raised the refund request with the OPS team  -  this is when the learner asked for a refund\n" +
+"  Request Date: Date the OPS team internally forwarded/raised the refund request to the FINANCE team  -  this is an internal ops step, different from when the learner asked\n" +
+"  Refund Date: Date the refund was actually processed and issued from the company's end to the learner  -  this is the final execution date\n\n" +
+"  Refund Month / Refund Month and Year  -  CRITICAL RULE:\n" +
 "  These columns represent THE MONTH OF THE ENTIRE ROW ENTRY. This means every column in that row (Refund Category, PA, Course, BU, Payment Mode, Upfront status, etc.) belongs to that month.\n" +
-"  When asked ANY monthwise question about refund data — e.g. 'PA Mis-sell by month', 'how many upfront refunds in July', 'which course had most refunds in April' — ALWAYS filter by Refund Month or Refund Month and Year. Do NOT use Date of Receipt, Refund Request Date, or any other date column for monthwise analysis.\n" +
+"  When asked ANY monthwise question about refund data  -  e.g. 'PA Mis-sell by month', 'how many upfront refunds in July', 'which course had most refunds in April'  -  ALWAYS filter by Refund Month or Refund Month and Year. Do NOT use Date of Receipt, Refund Request Date, or any other date column for monthwise analysis.\n" +
 "  Refund Month: Use for month-name-only questions (e.g. 'how many PA Mis-sell in July')\n" +
 "    Breakdown: " + (function(){
   var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -418,8 +418,8 @@ function buildPrompt() {
   sheetData.forEach(function(r){ var v=get(r,"Refund Month and Year"); if(v&&v!=="December 1899")c[v]=(c[v]||0)+1; });
   return Object.entries(c).sort().map(function(e){ return e[0]+": "+e[1]; }).join(" | ");
 })() + "\n" +
-"  NOTE: 2 rows show 'December 1899' in Refund Month and Year — data entry errors, always exclude from counts.\n\n" +
-"THREE DATE CLARIFICATION RULES — ALWAYS FOLLOW:\n" +
+"  NOTE: 2 rows show 'December 1899' in Refund Month and Year  -  data entry errors, always exclude from counts.\n\n" +
+"THREE DATE CLARIFICATION RULES  -  ALWAYS FOLLOW:\n" +
 "  1. 'When did the learner request a refund?' → use 'Refund Request Date by learner'\n" +
 "  2. 'When was the refund raised/processed internally?' → use 'Request Date' (OPS to Finance)\n" +
 "  3. 'When was the refund done/issued/processed?' → use 'Refund Date' (actual refund execution from company end)\n" +
@@ -460,14 +460,14 @@ function buildPrompt() {
 "  These two columns allow calculation of actual revenue retained.\n\n" +
 
 // ─── SALE vs STUDENT RETAINED/DROPPED ───
-"TWO RETENTION COLUMNS — THEY ARE DIFFERENT:\n" +
+"TWO RETENTION COLUMNS  -  THEY ARE DIFFERENT:\n" +
 "  'Sale Retained / Dropped' = Sales team's perspective on whether the sale was retained or dropped\n" +
 "    Dropped=" + countVal("Sale Retained / Dropped","Dropped") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Sale Retained / Dropped");}).length + "\n" +
 "  'Student Retained / Dropped - For Retention' = Ops/Operations team's perspective for retention calculation\n" +
 "    Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Student Retained / Dropped - For Retention");}).length + "\n" +
 "  These are two independent columns tracked by two different teams. Do NOT attempt to cross-reference or compare them row by row.\n" +
-"  When asked a question involving both columns (e.g. 'dropped by sales but retained by ops'), simply state the counts from each column separately and clearly — do not draw any conclusions about overlap, do not say there is no overlap, do not say the data cannot identify this. Just report each column's numbers confidently and separately.\n" +
-"  Always clarify which column when someone explicitly asks about retained/dropped from a sales or ops perspective — sales view vs ops view are different.\n\n" +
+"  When asked a question involving both columns (e.g. 'dropped by sales but retained by ops'), simply state the counts from each column separately and clearly  -  do not draw any conclusions about overlap, do not say there is no overlap, do not say the data cannot identify this. Just report each column's numbers confidently and separately.\n" +
+"  Always clarify which column when someone explicitly asks about retained/dropped from a sales or ops perspective  -  sales view vs ops view are different.\n\n" +
 
 "GENERAL RETAINED CALCULATION (default meaning of 'retained' unless explicitly asked about the column):\n" +
 "  Retained = Enrollments minus Refunds for the same period (quarter, month, or overall)\n" +
@@ -526,30 +526,30 @@ function buildPrompt() {
 "SAMPLE RECORDS (first 8 rows for reference):\n" + sampleRecords + "\n" +
 (sheetData.length > 8 ? "...and " + (sheetData.length - 8) + " more records\n\n" : "\n") +
 
-"CROSS-TAB LEARNER IDENTIFICATION — VERY IMPORTANT:\n" +
+"CROSS-TAB LEARNER IDENTIFICATION  -  VERY IMPORTANT:\n" +
 "  A learner can be identified across tabs using ANY of these 3 identifiers (some learners may have only one):\n" +
-"    1. Email — most reliable. Present in all tabs. Use case-insensitive matching.\n" +
-"    2. Name — present in all tabs but some are PI-encrypted (v1:...) in refunds tab. Use fuzzy/case-insensitive matching.\n" +
-"    3. Hubspot ID — present in refunds and enrollments tabs. Mostly blank in retention tab.\n" +
+"    1. Email  -  most reliable. Present in all tabs. Use case-insensitive matching.\n" +
+"    2. Name  -  present in all tabs but some are PI-encrypted (v1:...) in refunds tab. Use fuzzy/case-insensitive matching.\n" +
+"    3. Hubspot ID  -  present in refunds and enrollments tabs. Mostly blank in retention tab.\n" +
 "  Always try email first, then name, then Hubspot ID. If two match, treat as the same learner.\n\n" +
 
 "CROSS-TAB ANALYSIS CAPABILITY:\n" +
 "  You CAN answer questions that require matching learners across the Refunds and Enrollments tabs.\n" +
 "  Example: 'Find learners who refunded in Q1 but re-enrolled in any quarter'\n" +
 "    Method: Match email/name from Q1 refunds against enrollments. If same email appears in enrollments in a LATER quarter than Q1, that is a re-enrollment.\n" +
-"    IMPORTANT: If a learner appears in both Q1 refunds AND Q1 enrollments with the same email, that is the SAME enrollment event — not a re-enrollment. Re-enrollment = appears in a DIFFERENT (later) quarter in enrollments.\n" +
+"    IMPORTANT: If a learner appears in both Q1 refunds AND Q1 enrollments with the same email, that is the SAME enrollment event  -  not a re-enrollment. Re-enrollment = appears in a DIFFERENT (later) quarter in enrollments.\n" +
 "  Known cross-tab findings (Q1 refunds vs all enrollments):\n" +
 "    Total Q1 refunds: 100 | Matched by email to any enrollment: 79\n" +
 "    Of those 79 matches: 75 are same-quarter Q1 matches (same enrollment, not re-enrollment)\n" +
 "    Genuine re-enrollments (later quarter): Q2=2 learners, Q3=1 learner, Q4=1 learner = 4 total\n" +
 "    Re-enrolled learners: Sandeep Ayloo (Q2), Jyothsna Jonnakuti (Q2), Rahul Jain (Q3), Faizal Ali Mir (Q4)\n" +
-"  This same logic applies for any quarter — match refund email against enrollment email across quarters.\n" +
-"  NEVER say the data does not allow cross-tab learner tracking — it does, via email matching.\n\n"
+"  This same logic applies for any quarter  -  match refund email against enrollment email across quarters.\n" +
+"  NEVER say the data does not allow cross-tab learner tracking  -  it does, via email matching.\n\n" +
 
 // ─────────────────────────────────────────────
-// ENROLLMENTS TAB — FULL DATA SUMMARY
+// ENROLLMENTS TAB  -  FULL DATA SUMMARY
 // ─────────────────────────────────────────────
-"=== ENROLLMENTS TAB (Full Year 2025 — Q1 to Q4) ===\n" +
+"=== ENROLLMENTS TAB (Full Year 2025  -  Q1 to Q4) ===\n" +
 "Total Enrollments: " + enrollData.length + "\n\n" +
 
 "ENROLLMENTS BY QUARTER & YEAR:\n" +
@@ -560,7 +560,7 @@ function buildPrompt() {
 })() + "\n\n" +
 
 "ENROLLMENT COLUMN REFERENCE:\n" +
-"  Program Type: Broad category of the learner's program — most important grouping for enrollment analysis.\n" +
+"  Program Type: Broad category of the learner's program  -  most important grouping for enrollment analysis.\n" +
 "    Top Program Types: EdgeUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="EdgeUp";}).length +
 " | Level Up=" + enrollData.filter(function(r){return get(r,"Program Type")==="Level Up";}).length +
 " | New ML=" + enrollData.filter(function(r){return get(r,"Program Type")==="New ML";}).length +
@@ -571,13 +571,13 @@ function buildPrompt() {
 "  Candidate ID: Internal candidate identifier\n" +
 "  Name: Learner full name\n" +
 "  HS ID / Email / HS ID: HubSpot CRM ID or learner email\n" +
-"  Time Zone: Learner timezone — mostly US timezones, some blank\n" +
-"  Program Name: Full specific program title — use Program Type for analysis, Program Name is too granular\n" +
-"  Current Cohort: The cohort the learner is currently assigned to — can be asked about specifically\n" +
-"  Deposit Paid Date: Date learner first paid deposit — equivalent to enrollment date\n" +
+"  Time Zone: Learner timezone  -  mostly US timezones, some blank\n" +
+"  Program Name: Full specific program title  -  use Program Type for analysis, Program Name is too granular\n" +
+"  Current Cohort: The cohort the learner is currently assigned to  -  can be asked about specifically\n" +
+"  Deposit Paid Date: Date learner first paid deposit  -  equivalent to enrollment date\n" +
 "  Quarter + Year: Quarter and year of enrollment\n\n" +
 
-"PAYMENT COLUMNS (Enrollments Tab — 4 separate columns, each means something different):\n" +
+"PAYMENT COLUMNS (Enrollments Tab  -  4 separate columns, each means something different):\n" +
 "  Initial Payment Type: Payment status at time of enrollment (has_paid_in_full / Flexipay_has_time_to_pay / has_time_to_pay / ENROLLED_WITH_NO_DUES etc.)\n" +
 "  System Payment Status: Technical system status at enrollment\n" +
 "  Live Status: Most up-to-date payment/enrollment status of the learner:\n" +
@@ -600,7 +600,7 @@ function buildPrompt() {
 "SSA (Student Success Advisor) COLUMNS:\n" +
 "  Current SSA: The SSA currently handling the learner\n" +
 "  Original SSA: The SSA who first onboarded the learner\n" +
-"  These are two different people sometimes — current vs original.\n\n" +
+"  These are two different people sometimes  -  current vs original.\n\n" +
 
 "OB STATUS (Enrollment Tab):\n" +
 "  Only 'Onboarded' = successfully onboarded. Everything else = not successfully onboarded.\n" +
@@ -645,11 +645,11 @@ function buildPrompt() {
   return lines.join("\n");
 })() + "\n" +
 "  SOURCE OF TRUTH: Always use the Refunds tab for refund count and the Enrollments tab for enrollment count when calculating refund rate.\n" +
-"  NOTE: Live Status 'Refunded' in enrollments tab is a different tracking — do NOT use it for refund rate.\n\n" +
+"  NOTE: Live Status 'Refunded' in enrollments tab is a different tracking  -  do NOT use it for refund rate.\n\n" +
 
-"ENROLLMENT MONTH COLUMNS — CRITICAL RULE:\n" +
+"ENROLLMENT MONTH COLUMNS  -  CRITICAL RULE:\n" +
 "  These columns represent THE MONTH OF THE ENTIRE ROW ENTRY. This means every column in that row (Payment Category, Live Status, OB Status, Program Type, SSA, Payment Mode, etc.) belongs to that month.\n" +
-"  When asked ANY monthwise question about enrollment data — e.g. 'how many fully paid in January', 'which program type had most enrollments in June', 'OB success rate by month' — ALWAYS filter by Enrollment Month or Enrollment Month and Year. Do NOT use Deposit Paid Date or any other date column for monthwise analysis.\n" +
+"  When asked ANY monthwise question about enrollment data  -  e.g. 'how many fully paid in January', 'which program type had most enrollments in June', 'OB success rate by month'  -  ALWAYS filter by Enrollment Month or Enrollment Month and Year. Do NOT use Deposit Paid Date or any other date column for monthwise analysis.\n" +
 "  Enrollment Month: Use for month-name-only questions (e.g. 'how many enrolled in June')\n" +
 "    Breakdown: " + (function(){
   var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -668,7 +668,7 @@ function buildPrompt() {
   });
   return Object.entries(c).sort().map(function(e){ return e[0]+": "+e[1]; }).join(" | ");
 })() + "\n" +
-"  NOTE: 1 row has 'ENROLLED_WITH_NO_DUES' as enrollment month — data entry error, always exclude from counts.\n\n" +
+"  NOTE: 1 row has 'ENROLLED_WITH_NO_DUES' as enrollment month  -  data entry error, always exclude from counts.\n\n" +
 
 "PROGRAM TYPE BREAKDOWN BY QUARTER (Enrollments):\n" +
 (function(){
@@ -782,7 +782,7 @@ function renderMessages() {
       inlineChartCount++;
       var cid = "inlineChart" + inlineChartCount;
       setTimeout(function(id, d){ return function(){ renderInlineChart(id, d); }; }(cid, chartData), 150);
-      return '<div class="msg-ai"><div class="msg-label">AI ANALYST — CHART</div>' +
+      return '<div class="msg-ai"><div class="msg-label">AI ANALYST  -  CHART</div>' +
         '<p style="font-weight:600;color:#1a202c;font-size:13px;margin-bottom:8px">' + (chartData.title||"Chart") + '</p>' +
         '<div style="background:#f7fafc;border-radius:8px;padding:10px">' +
         '<canvas id="' + cid + '" height="95"></canvas></div></div>';
@@ -828,7 +828,7 @@ function setLoading(on) {
 }
 
 // ─────────────────────────────────────────────
-// STAT CARDS — from Refunds tab, filter-aware
+// STAT CARDS  -  from Refunds tab, filter-aware
 // ─────────────────────────────────────────────
 function updateStats() {
   var fd = filteredRefunds();
@@ -842,7 +842,7 @@ function updateStats() {
   var refundRate  = totalEnroll > 0 ? (total/totalEnroll*100).toFixed(1)+"%" : "N/A";
 
   var stats = [
-    {l:"Total Enrollments", v:totalEnroll||"—", c:"#1a56db", i:"🎓"},
+    {l:"Total Enrollments", v:totalEnroll||" - ", c:"#1a56db", i:"🎓"},
     {l:"Total Refunds",     v:total,             c:"#f87171", i:"↩"},
     {l:"Refund Rate",       v:refundRate,         c:"#dc2626", i:"📉"},
     {l:"Upfront Refunds",   v:upfront,            c:"#34d399", i:"✅"},
@@ -862,7 +862,7 @@ function updateStats() {
 }
 
 // ─────────────────────────────────────────────
-// CHARTS — filter-aware
+// CHARTS  -  filter-aware
 // ─────────────────────────────────────────────
 var COLORS = ["#1a56db","#fb923c","#34d399","#f87171","#38bdf8","#a78bfa","#4ade80","#fbbf24","#e879f9","#94a3b8","#f472b6","#2dd4bf"];
 var PIE_COLORS = ["#4a6fa5","#a8c0dd","#2d5282","#d0dff0","#6b93c4","#e8eff7"];
@@ -954,7 +954,7 @@ function renderCharts() {
   ]);
 }
 
-// FLEXIPAY TABLE — filter-aware
+// FLEXIPAY TABLE  -  filter-aware
 function renderFlexipay() {
   var fd = filteredRefunds();
   var flex = fd.filter(function(r){ return get(r,"Flexipay (Yes / No)").toLowerCase() === "yes"; });
@@ -980,14 +980,14 @@ function renderFlexipay() {
     return "<tr>" +
       "<td style='color:#718096;font-size:11px'>" + (i+1) + "</td>" +
       "<td style='font-weight:600;color:#1e293b;font-size:12px'>" + name + "</td>" +
-      "<td style='color:#475569;font-size:12px'>" + (get(r,"Course")||"—") + "</td>" +
-      "<td style='color:#475569;font-size:12px'>" + (get(r,"BU")||"—") + "</td>" +
+      "<td style='color:#475569;font-size:12px'>" + (get(r,"Course")||" - ") + "</td>" +
+      "<td style='color:#475569;font-size:12px'>" + (get(r,"BU")||" - ") + "</td>" +
       "<td style='color:#1d4ed8;font-weight:600;font-size:12px'>$" + c.toLocaleString() + "</td>" +
-      "<td style='color:" + (rf>c?"#dc2626":rf===0?"#94a3b8":"#166534") + ";font-weight:600;font-size:12px'>" + (rf===0?"—":"$"+rf.toLocaleString()) + "</td>" +
+      "<td style='color:" + (rf>c?"#dc2626":rf===0?"#94a3b8":"#166534") + ";font-weight:600;font-size:12px'>" + (rf===0?" - ":"$"+rf.toLocaleString()) + "</td>" +
       "<td style='color:" + (d>0?"#dc2626":d<0?"#166534":"#64748b") + ";font-weight:700;font-size:12px'>" + (d===0?"±0":d>0?"+$"+d.toLocaleString():"-$"+Math.abs(d).toLocaleString()) + "</td>" +
-      "<td style='color:#64748b;font-size:12px'>" + (get(r,"Duration Bucket")||"—") + "</td>" +
-      "<td style='font-size:11px'><span style='background:#f1f5f9;border-radius:4px;padding:2px 7px;color:#475569'>" + (get(r,"Refund Category")||"—") + "</span></td>" +
-      "<td style='color:#64748b;font-size:11px'>" + (get(r,"Payment Mode")||"—") + "</td>" +
+      "<td style='color:#64748b;font-size:12px'>" + (get(r,"Duration Bucket")||" - ") + "</td>" +
+      "<td style='font-size:11px'><span style='background:#f1f5f9;border-radius:4px;padding:2px 7px;color:#475569'>" + (get(r,"Refund Category")||" - ") + "</span></td>" +
+      "<td style='color:#64748b;font-size:11px'>" + (get(r,"Payment Mode")||" - ") + "</td>" +
       "<td>" + flag + "</td>" +
       "</tr>";
   }).join("");
@@ -1132,7 +1132,7 @@ function renderRetention() {
 
     var grandDenom=st.denomIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
     var grandNumer=st.numerIncluded.reduce(function(s,ls){return s+fd.filter(function(r){return get(r,"Current Payment Status")===ls;}).length;},0);
-    var grandPct=grandDenom>0?(grandNumer/grandDenom*100).toFixed(1):"—";
+    var grandPct=grandDenom>0?(grandNumer/grandDenom*100).toFixed(1):" - ";
 
     var minW=200+cols.length*100;
     var html=
@@ -1152,7 +1152,7 @@ function renderRetention() {
         var labelStyle=isNumer?"color:#059669;font-weight:700":isDenom?"color:#1e293b;font-weight:600":"color:#94a3b8;font-weight:400";
         return '<tr style="background:'+rowBg+'">'+
           '<td style="padding:9px 14px;font-size:11px;'+labelStyle+';position:sticky;left:0;z-index:1;border-bottom:1px solid #e2e8f0;white-space:nowrap;background:'+rowBg+'">'+s+'</td>'+
-          cols.map(function(c){var v=pivot[s][c]||0;return '<td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e2e8f0;color:'+(v?"#1e293b":"#cbd5e0")+';font-weight:'+(v?"600":"400")+'">'+(v||"—")+'</td>';}).join('')+
+          cols.map(function(c){var v=pivot[s][c]||0;return '<td style="padding:8px 6px;text-align:center;border-bottom:1px solid #e2e8f0;color:'+(v?"#1e293b":"#cbd5e0")+';font-weight:'+(v?"600":"400")+'">'+(v||" - ")+'</td>';}).join('')+
           '<td style="padding:8px 10px;text-align:center;font-weight:700;color:#475569;background:#f8fafc;border-bottom:1px solid #e2e8f0">'+(rowTotals[s]||0)+'</td>'+
           '</tr>';
       }).join('')+
@@ -1170,10 +1170,10 @@ function renderRetention() {
       '<tr style="background:#1a1040">'+
       '<td style="padding:9px 14px;font-weight:700;font-size:11px;color:#fff;position:sticky;left:0;z-index:1;background:#1a1040;white-space:nowrap">Retention %</td>'+
       cols.map(function(c){
-        var pct=colDenom[c]>0?(colNumer[c]/colDenom[c]*100).toFixed(1):"—";
-        return '<td style="padding:8px 6px;text-align:center"><span style="background:'+pctBg(pct)+';color:'+pctColor(pct)+';padding:3px 8px;border-radius:12px;font-weight:700;font-size:11px">'+(pct==="—"?"—":pct+"%")+'</span></td>';
+        var pct=colDenom[c]>0?(colNumer[c]/colDenom[c]*100).toFixed(1):" - ";
+        return '<td style="padding:8px 6px;text-align:center"><span style="background:'+pctBg(pct)+';color:'+pctColor(pct)+';padding:3px 8px;border-radius:12px;font-weight:700;font-size:11px">'+(pct===" - "?" - ":pct+"%")+'</span></td>';
       }).join('')+
-      '<td style="padding:8px 10px;text-align:center"><span style="background:'+pctBg(grandPct)+';color:'+pctColor(grandPct)+';padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px">'+(grandPct==="—"?"—":grandPct+"%")+'</span></td>'+
+      '<td style="padding:8px 10px;text-align:center"><span style="background:'+pctBg(grandPct)+';color:'+pctColor(grandPct)+';padding:3px 10px;border-radius:12px;font-weight:700;font-size:12px">'+(grandPct===" - "?" - ":grandPct+"%")+'</span></td>'+
       '</tr>'+
       '</tbody></table></div>';
     return html;
@@ -1203,11 +1203,11 @@ function renderRetention() {
   // ── Section headers + 3 pivot tables ──
   var pivotHtml =
     legendHtml+
-    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">📊 Pivot 1 — by Program Type</h4>'+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">📊 Pivot 1  -  by Program Type</h4>'+
     buildPivot("Program Type","Program Type")+
-    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">👤 Pivot 2 — by Current SSA</h4>'+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">👤 Pivot 2  -  by Current SSA</h4>'+
     buildPivot("Current SSA","Current SSA")+
-    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">💳 Pivot 3 — by Payment Mode</h4>'+
+    '<h4 style="font-size:12px;font-weight:700;color:#1e40af;margin-bottom:8px">💳 Pivot 3  -  by Payment Mode</h4>'+
     buildPivot("Payment Mode","Payment Mode");
 
   var container = document.getElementById("retentionPivot");
@@ -1242,7 +1242,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1–Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1 - Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1270,7 +1270,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px">— filters all tabs. Chat is independent.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"> -  filters all tabs. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
@@ -1279,7 +1279,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <!-- CHAT PANEL -->
 <div id="panel-chat" class="panel active">
   <div class="pills">
-    <span class="pill" onclick="sendMessage('Give me an executive summary of all quarters — enrollments and refunds')">Executive summary</span>
+    <span class="pill" onclick="sendMessage('Give me an executive summary of all quarters  -  enrollments and refunds')">Executive summary</span>
     <span class="pill" onclick="sendMessage('What is the refund rate for each quarter in 2025?')">Refund rate by quarter</span>
     <span class="pill" onclick="sendMessage('How many upfront, non-upfront and flexipay refunds are there?')">Upfront breakdown</span>
     <span class="pill" onclick="sendMessage('Which program type has the most enrollments in 2025?')">Program analysis</span>
@@ -1314,7 +1314,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 
 <!-- CHARTS PANEL -->
 <div id="panel-charts" class="panel" style="gap:14px">
-  <div class="card full"><h3>Refund Categories — Why Learners Left</h3><div style="height:220px;position:relative"><canvas id="cCat"></canvas></div></div>
+  <div class="card full"><h3>Refund Categories  -  Why Learners Left</h3><div style="height:220px;position:relative"><canvas id="cCat"></canvas></div></div>
   <div class="grid2">
     <div class="card"><h3>Upfront / Non-Upfront / Flexipay</h3><div style="height:120px;position:relative"><canvas id="cBU"></canvas></div></div>
     <div class="card"><h3>Trial Window</h3><div style="height:120px;position:relative"><canvas id="cTrial"></canvas></div></div>
@@ -1351,7 +1351,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-retention" class="panel">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div>
-      <h3 style="font-size:13px;color:#1e40af;font-weight:700">🔁 Retention Calculator — by Program Type</h3>
+      <h3 style="font-size:13px;color:#1e40af;font-weight:700">🔁 Retention Calculator  -  by Program Type</h3>
       <p style="font-size:11px;color:#718096;margin-top:2px">Click any status pill to move it between Included / Excluded. Retention % updates instantly.</p>
     </div>
     <button onclick="retentionState=null;renderRetention();" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#fee2e2;color:#dc2626">↺ Reset Defaults</button>
@@ -1363,15 +1363,15 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-insights" class="panel">
   <div class="grid2">
     <div class="card" style="border-left:3px solid #dc2626">
-      <h3 style="color:#dc2626;font-size:13px">PA Mis-sell — Top Refund Category</h3>
-      <p style="font-size:12px;color:#4a5568;line-height:1.7">Program Advisors incorrectly sold programs — wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
+      <h3 style="color:#dc2626;font-size:13px">PA Mis-sell  -  Top Refund Category</h3>
+      <p style="font-size:12px;color:#4a5568;line-height:1.7">Program Advisors incorrectly sold programs  -  wrong course, double enrollment, or misrepresented features. <strong style="color:#1a202c">Action:</strong> Audit call scripts, add post-enrollment confirmation emails, introduce peer review for new PAs.</p>
     </div>
     <div class="card" style="border-left:3px solid #d97706">
       <h3 style="color:#d97706;font-size:13px">Majority of Refunds in Trial Window</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Most learners drop before completing the trial period. <strong style="color:#1a202c">Action:</strong> Strengthen Day-1 SSA check-in calls, improve first-week onboarding, assign dedicated success advisors immediately after enrollment.</p>
     </div>
     <div class="card" style="border-left:3px solid #2563eb">
-      <h3 style="color:#2563eb;font-size:13px">Flagship ML — Highest Refund Count</h3>
+      <h3 style="color:#2563eb;font-size:13px">Flagship ML  -  Highest Refund Count</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Highest refund count among all courses. <strong style="color:#1a202c">Action:</strong> Cross-reference with enrollment numbers to assess refund rate. If disproportionate, investigate early-class quality and PA expectation-setting.</p>
     </div>
     <div class="card" style="border-left:3px solid #059669">
@@ -1379,11 +1379,11 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Learners found content too basic or misaligned with their goals. <strong style="color:#1a202c">Action:</strong> Product team to review early-module depth in PM, TPM, and AI programs.</p>
     </div>
     <div class="card" style="border-left:3px solid #7c3aed">
-      <h3 style="color:#7c3aed;font-size:13px">Financial Hardship — Significant Category</h3>
+      <h3 style="color:#7c3aed;font-size:13px">Financial Hardship  -  Significant Category</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Visa uncertainty, employer sponsorship failing, unexpected debt. <strong style="color:#1a202c">Action:</strong> Introduce proactive hardship pause policy before learner reaches refund stage.</p>
     </div>
     <div class="card" style="border-left:3px solid #d97706">
-      <h3 style="color:#d97706;font-size:13px">Policy Exceptions — Track Accountability</h3>
+      <h3 style="color:#d97706;font-size:13px">Policy Exceptions  -  Track Accountability</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Refunds approved outside normal policy signal ad-hoc decision making. <strong style="color:#1a202c">Action:</strong> Define formal exception criteria with documented approver accountability.</p>
     </div>
     <div class="card" style="border-left:3px solid #dc2626">
@@ -1391,7 +1391,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
       <p style="font-size:12px;color:#4a5568;line-height:1.7">VM - 4 Attempts cases mean learners were never reached at onboarding. <strong style="color:#1a202c">Action:</strong> Verify contact info at enrollment, use WhatsApp as backup, improve sales-to-OB handoff.</p>
     </div>
     <div class="card" style="border-left:3px solid #475569">
-      <h3 style="color:#475569;font-size:13px">H1B Visa — Macro Risk for US Cohorts</h3>
+      <h3 style="color:#475569;font-size:13px">H1B Visa  -  Macro Risk for US Cohorts</h3>
       <p style="font-size:12px;color:#4a5568;line-height:1.7">Multiple US learners cited H1B policy changes as refund reason. <strong style="color:#1a202c">Action:</strong> Communicate deferral flexibility proactively; add geo-specific clauses for US cohorts.</p>
     </div>
   </div>
