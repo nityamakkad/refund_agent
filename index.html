@@ -134,7 +134,16 @@ function parseCSV(text) {
 }
 
 function parseSimpleCSV(text) {
-  var lines = text.split("\n");
+  // Same multi-line quoted field fix as main CSV parser
+  var cleaned = [];
+  var inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '"') { inQ = !inQ; cleaned.push(ch); }
+    else if ((ch === '\n' || ch === '\r') && inQ) { cleaned.push(' '); }
+    else { cleaned.push(ch); }
+  }
+  var lines = cleaned.join('').split('\n');
   var headers = splitCSVLine(lines[0]);
   var rows = [];
   for (var i = 1; i < lines.length; i++) {
