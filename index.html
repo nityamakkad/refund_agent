@@ -59,7 +59,6 @@
 <script>
 const SHEET_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
 const ENROLL_CSV_URL    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
-// ⚠️ IMPORTANT: Replace RETENTION_GID below with the actual gid of your Retention tab in Google Sheets
 const RETENTION_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=668744761&single=true&output=csv";
 
 var sheetData     = [];   // full refund data (all quarters)
@@ -1212,7 +1211,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1 - Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1240,7 +1239,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px"> -  filters all tabs. Chat is independent.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
 </div>
 
 <!-- STAT BAR -->
