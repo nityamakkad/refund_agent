@@ -458,7 +458,7 @@ function buildPrompt() {
 "    Edge-up LU, Edge-up SU, Step-up, Agent-up LU/SU also fall under AI BU\n" +
 "  Interview Prep BU breakdown by Category & Course:\n" +
 "    Level-up, Edge-up LU, Edge-up SU, Step-up, Move-up LU, Pathway, Boost-up\n" +
-"    Top courses: EM-63, TPM-58, Fullstack-28, Product Management-30, Backend-25, Data Engineering-21\n" +
+"    ALL courses with refund counts (complete list):\n    Flagship ML=91 | EM=63 | TPM=58 | Machine Learning=43 | Product Management=30 | Fullstack=28 | Applied Agentic AI=27 | Backend=25 | Data Engineering=21 | Early Engineering=18 | Test Engineering=17 | AI Data Science=17 | Data Analyst=12 | Data Science=11 | Project-up=9 | SRE=6 | AWS Cloud=5 | Applied Gen AI=4 | Agentic AI Pathway=4 | Growth Product Manager=4 | Mentoring=3 | Security Engineering=3 | Embedded Systems=3 | Deep Learning=2 | Coding=2 | Career=2 | Embedded System=2 | Growth Product Management=1 | AI PM=1 | Android=1 | Frontend=1 | iOS=1 | Careers=1 | Agentic AI for everyone=1 | Agentic AI Architecture=1 | Advanced ML=1\n" +
 "  EdgeUp = Edge-up LU + Edge-up SU combined across both BUs.\n" +
 "  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n" +
 "  Domain / Course: In the Refunds tab, Course column = the domain/course of the learner. This is the same as Domain in the Enrollments tab.\n\n" +
@@ -1224,7 +1224,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1 - Q4 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1252,7 +1252,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px"> -  filters all tabs. Chat is independent.</span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
 </div>
 
 <!-- STAT BAR -->
