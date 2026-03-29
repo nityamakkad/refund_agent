@@ -59,6 +59,7 @@
 <script>
 const SHEET_CSV_URL     = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=1624835958&single=true&output=csv";
 const ENROLL_CSV_URL    = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=873367137&single=true&output=csv";
+// ⚠️ IMPORTANT: Replace RETENTION_GID below with the actual gid of your Retention tab in Google Sheets
 const RETENTION_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRGKQB9MbNchDaUNilee8MqqQwzMUQmbhzyJ-C27iAO0WV6T2-aoTEbEJ8_zHtaFo6vWT9ENucotb6c/pub?gid=668744761&single=true&output=csv";
 
 var sheetData     = [];   // full refund data (all quarters)
@@ -459,7 +460,17 @@ function buildPrompt() {
 "    Level-up, Edge-up LU, Edge-up SU, Step-up, Move-up LU, Pathway, Boost-up\n" +
 "    Top courses: EM-63, TPM-58, Fullstack-28, Product Management-30, Backend-25, Data Engineering-21\n" +
 "  EdgeUp = Edge-up LU + Edge-up SU combined across both BUs.\n" +
-"  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n\n" +
+"  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n" +
+"  Domain / Course: In the Refunds tab, Course column = the domain/course of the learner. This is the same as Domain in the Enrollments tab.\n\n" +
+
+"DOMAIN / COURSE REFUND PERCENTAGE  -  ALWAYS CLARIFY BEFORE ANSWERING:\n" +
+"  When someone asks for 'domain-wise refund %' or 'course-wise refund %' or 'what is the refund % for X domain/course', ALWAYS ask:\n" +
+"  'Should I calculate this as:\n" +
+"   (a) Refund % vs Enrollments  -  count of X refunds / count of X enrollments x 100 (standard refund rate per domain)\n" +
+"   (b) Refund % vs Total Refunds  -  count of X refunds / total refunds x 100 (share of X in all refunds)'\n" +
+"  Do NOT assume which method to use  -  always ask first unless the user has explicitly stated which method they want.\n" +
+"  For method (a): use Course from Refunds tab matched with Domain from Enrollments tab.\n" +
+"  For method (b): use Course column from Refunds tab only, divide by total refund count.\n\n" +
 
 // ─── NET REVENUE & REFUND AMOUNTS ───
 "FINANCIAL COLUMNS:\n" +
@@ -576,6 +587,8 @@ function buildPrompt() {
 " | Agentic SkillUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="Agentic SkillUp";}).length +
 " | Advanced ML=" + enrollData.filter(function(r){return get(r,"Program Type")==="Advanced ML";}).length +
 " | AgentUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="AgentUp";}).length + " (and others)\n" +
+"  Domain: Specific program/course domain within Program Type (e.g. Fullstack, TPM, Machine Learning Program, Engineering Management). Equivalent to Course when asked about domain-wise analysis. Available in Enrollments tab.\n" +
+"    Top Domains: Machine Learning Program=582 | EdgeUp=493 | Step Up=469 | Adv ML=282 | Applied Agentic AI For SWEs=265 | Engineering Management=206 | Backend=136 | TPM=131 | Data Engineering=114 | Fullstack=81 | Product Management=61 (and many more)\n" +
 "  Candidate ID: Internal candidate identifier\n" +
 "  Name: Learner full name\n" +
 "  HS ID / Email / HS ID: HubSpot CRM ID or learner email\n" +
@@ -1211,7 +1224,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · Q1 - Q4 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1239,7 +1252,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <option value="all">All Months</option>
   </select>
   <span id="filterBadge" class="filter-active-badge" style="display:none"></span>
-  <span style="font-size:11px;color:#718096;margin-left:4px"></span>
+  <span style="font-size:11px;color:#718096;margin-left:4px"> -  filters all tabs. Chat is independent.</span>
 </div>
 
 <!-- STAT BAR -->
