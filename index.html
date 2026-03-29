@@ -553,17 +553,13 @@ function buildPrompt() {
 "  Always try email first, then name, then Hubspot ID. If two match, treat as the same learner.\n\n" +
 
 "CROSS-TAB ANALYSIS CAPABILITY:\n" +
-"  You CAN answer questions that require matching learners across the Refunds and Enrollments tabs.\n" +
-"  Example: 'Find learners who refunded in Q1 but re-enrolled in any quarter'\n" +
-"    Method: Match email/name from Q1 refunds against enrollments. If same email appears in enrollments in a LATER quarter than Q1, that is a re-enrollment.\n" +
-"    IMPORTANT: If a learner appears in both Q1 refunds AND Q1 enrollments with the same email, that is the SAME enrollment event  -  not a re-enrollment. Re-enrollment = appears in a DIFFERENT (later) quarter in enrollments.\n" +
-"  Known cross-tab findings (Q1 refunds vs all enrollments):\n" +
-"    Total Q1 refunds: 100 | Matched by email to any enrollment: 79\n" +
-"    Of those 79 matches: 75 are same-quarter Q1 matches (same enrollment, not re-enrollment)\n" +
-"    Genuine re-enrollments (later quarter): Q2=2 learners, Q3=1 learner, Q4=1 learner = 4 total\n" +
-"    Re-enrolled learners: Sandeep Ayloo (Q2), Jyothsna Jonnakuti (Q2), Rahul Jain (Q3), Faizal Ali Mir (Q4)\n" +
-"  This same logic applies for any quarter  -  match refund email against enrollment email across quarters.\n" +
-"  NEVER say the data does not allow cross-tab learner tracking  -  it does, via email matching.\n\n" +
+"  You CAN answer questions requiring matching learners across Refunds and Enrollments tabs.\n" +
+"  MATCHING METHOD: Match by email first (primary), then name (case-insensitive), then Hubspot ID. Use whichever is available.\n" +
+"  SAME QUARTER RULE: If a learner appears in both refunds AND enrollments in the SAME quarter  -  that is the same event, NOT a re-enrollment. Re-enrollment only counts if they appear in a LATER quarter in enrollments.\n" +
+"  WHEN LISTING LEARNERS: Show whichever identifier is available  -  Name, Email, or Hubspot ID (in that preference order). No need to show all three. Also show Course (from refunds) + Domain (from enrollments). Never say details are unavailable without checking all three identifiers.\n" +
+"  DOMAIN/COURSE FOR RE-ENROLLED LEARNERS: For each matched learner, the Course column in Refunds tab shows what they originally enrolled in, and the Domain column in Enrollments tab shows what they re-enrolled into. Always include both in the answer.\n" +
+"  This logic applies for any quarter comparison  -  always match across tabs using the above method.\n" +
+"  NEVER say cross-tab tracking is not possible  -  it is always possible via email/name/Hubspot ID matching.\n\n" +
 
 // ─────────────────────────────────────────────
 // ENROLLMENTS TAB  -  FULL DATA SUMMARY
