@@ -1167,10 +1167,10 @@ function renderRetention() {
       '<table style="width:100%;border-collapse:collapse;font-size:12px">'+
       '<thead><tr style="background:#1a1040">'+
         '<th style="padding:12px 16px;text-align:left;color:#e2e8f0;font-size:11px;font-weight:700;white-space:nowrap;min-width:180px">'+rowField+'</th>'+
-        '<th style="padding:12px 12px;text-align:center;color:#e2e8f0;font-size:11px;font-weight:600">Grand Total</th>'+
+        '<th style="padding:12px 12px;text-align:center;color:#1a202c;font-size:11px;font-weight:600">Grand Total</th>'+
         '<th style="padding:12px 12px;text-align:center;color:#fbbf24;font-size:11px;font-weight:700">Net Base<br><span style="font-size:9px;font-weight:400;opacity:.8">Denominator</span></th>'+
         '<th style="padding:12px 12px;text-align:center;color:#34d399;font-size:11px;font-weight:700">Numerator<br><span style="font-size:9px;font-weight:400;opacity:.8">Retained</span></th>'+
-        '<th style="padding:12px 12px;text-align:center;color:#e2e8f0;font-size:11px;font-weight:700">Retention %</th>'+
+        '<th style="padding:12px 12px;text-align:center;color:#1a202c;font-size:11px;font-weight:700">Retention %</th>'+
       '</tr></thead>'+
       '<tbody>'+bodyRows+
       '<tr style="background:#1a1040">'+
@@ -1329,7 +1329,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
 <div id="panel-retention" class="panel">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px">
     <div>
-      <h3 style="font-size:13px;color:#1e40af;font-weight:700">🔁 Retention Calculator  -  by Program Type</h3>
+      <h3 style="font-size:13px;color:#1e40af;font-weight:700">🔁 Retention Calculator</h3>
       <p style="font-size:11px;color:#718096;margin-top:2px">Click any status pill to move it between Included / Excluded. Retention % updates instantly.</p>
     </div>
     <button onclick="retentionState=null;renderRetention();" style="padding:6px 14px;border-radius:8px;border:none;cursor:pointer;font-size:11px;font-weight:600;background:#fee2e2;color:#dc2626">↺ Reset Defaults</button>
