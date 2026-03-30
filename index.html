@@ -120,15 +120,12 @@ function parseCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
-    // A valid refund row must have Quarter OR Year AND at least one identifier
+    // A valid refund row must have Quarter OR Year (PII columns removed - use Quarter/Year as primary identifier)
     var hasQuarter = (obj['Quarter'] || '').length > 0;
     var hasYear    = (obj['Year'] || '').length > 0;
-    var hasEmail   = (obj['Email id'] || '').indexOf('@') !== -1;
-    var hasName    = (obj['Name'] || '').length > 1;
-    var hasHubspot = (obj['Hubspot ID'] || obj['Hubspot id'] || '').length > 2;
     var hasInvoice = (obj['Invoice No.'] || '').indexOf('IKUS') === 0;
-    var hasIdentifier = hasEmail || hasName || hasHubspot || hasInvoice;
-    if ((hasQuarter || hasYear) && hasIdentifier) rows.push(obj);
+    var hasHubspot = (obj['Hubspot ID'] || obj['Hubspot id'] || '').length > 2;
+    if (hasQuarter || hasYear || hasInvoice || hasHubspot) rows.push(obj);
   }
   return rows;
 }
@@ -175,7 +172,7 @@ function parseEnrollCSV(text) {
     var vals = splitCSVLine(line);
     var obj = {};
     headers.forEach(function(h, k) { obj[h.trim()] = (vals[k] || '').trim(); });
-    if (obj['Email / HS ID'] || obj['Name'] || obj['Candidate ID']) rows.push(obj);
+    if (obj['Quarter'] || obj['Program Type'] || obj['Candidate ID'] || obj['HS ID']) rows.push(obj);
   }
   return rows;
 }
@@ -397,9 +394,7 @@ function buildPrompt() {
 
 // ─── LEARNER IDENTITY ───
 "LEARNER IDENTITY COLUMNS:\n" +
-"  Hubspot ID: Internal CRM identifier for the learner\n" +
-"  Email id: Learner's email address  -  some may be blank\n" +
-"  Name: Learner full name  -  some names are PI-encrypted (start with 'v1:'), use Hubspot ID in those cases\n" +
+"  Hubspot ID: Primary learner identifier (Name and Email have been removed from data for privacy). Use Hubspot ID to identify learners.\n" +
 "  Count: Number of programs the learner is enrolled in (1, 2, or 3)\n" +
 "  New / Alumni: New=" + countVal("New / Alumni","new") + " | Alumni=" + countVal("New / Alumni","alumni") + " | Blank=" + sheetData.filter(function(r){return !get(r,"New / Alumni");}).length + "\n\n" +
 
@@ -567,9 +562,9 @@ function buildPrompt() {
 
 "CROSS-TAB ANALYSIS CAPABILITY:\n" +
 "  You CAN answer questions requiring matching learners across Refunds and Enrollments tabs.\n" +
-"  MATCHING METHOD: Match by email first (primary), then name (case-insensitive), then Hubspot ID. Use whichever is available.\n" +
+"  MATCHING METHOD: Match by Hubspot ID (Name and Email have been removed from data for privacy). If Hubspot ID is blank, use Invoice No. or any other available unique identifier.\n" +
 "  SAME QUARTER RULE: If a learner appears in both refunds AND enrollments in the SAME quarter  -  that is the same event, NOT a re-enrollment. Re-enrollment only counts if they appear in a LATER quarter in enrollments.\n" +
-"  WHEN LISTING LEARNERS: Show whichever identifier is available  -  Name, Email, or Hubspot ID (in that preference order). No need to show all three. Also show Course (from refunds) + Domain (from enrollments). Never say details are unavailable without checking all three identifiers.\n" +
+"  WHEN LISTING LEARNERS: Show Hubspot ID + Course (from refunds) + Domain (from enrollments). Name and Email are not available in the data.\n" +
 "  DOMAIN/COURSE FOR RE-ENROLLED LEARNERS: For each matched learner, the Course column in Refunds tab shows what they originally enrolled in, and the Domain column in Enrollments tab shows what they re-enrolled into. Always include both in the answer.\n" +
 "  This logic applies for any quarter comparison  -  always match across tabs using the above method.\n" +
 "  NEVER say cross-tab tracking is not possible  -  it is always possible via email/name/Hubspot ID matching.\n\n" +
@@ -599,8 +594,7 @@ function buildPrompt() {
 "  Domain: Specific program/course domain within Program Type. Equivalent to Course when asked about domain-wise analysis. Available in Enrollments tab.\n" +
 "  DOMAIN ENROLLMENT COUNTS BY QUARTER: Filter the Enrollments tab by Domain AND Quarter+Year together. The Domain and Quarter columns both exist in every enrollment row so any combination is always possible. Never guess  -  always derive from the data.\n" +
 "  Candidate ID: Internal candidate identifier\n" +
-"  Name: Learner full name\n" +
-"  HS ID / Email / HS ID: HubSpot CRM ID or learner email\n" +
+"  HS ID: HubSpot CRM ID (Name and Email removed for privacy)\n" +
 "  Time Zone: Learner timezone  -  mostly US timezones, some blank\n" +
 "  Program Name: Full specific program title  -  use Program Type for analysis, Program Name is too granular\n" +
 "  Current Cohort: The cohort the learner is currently assigned to  -  can be asked about specifically\n" +
