@@ -413,6 +413,11 @@ function buildPrompt() {
 "  Cohort Start Date: Date when the cohort officially started (most filled, some blank = not yet started or not recorded)\n" +
 "  Orientation Date: Date learner attended orientation  -  blank means not attended or not yet recorded\n" +
 "  First Class Date: Date of learner's first live class  -  blank means not attended or not yet recorded\n" +
+"  HOW TO ANSWER orientation/first class questions: Compare 'Refund Request Date by learner' against 'Orientation Date' or 'First Class Date' row by row.\n" +
+"    Refunded BEFORE first class = rows where First Class Date is blank OR Refund Request Date by learner < First Class Date\n" +
+"    Refunded AFTER first class = rows where First Class Date is filled AND Refund Request Date by learner >= First Class Date\n" +
+"    Same logic applies for Orientation Date. Apply the same filter for any month/quarter/year by also filtering on Refund Month or Quarter+Year.\n" +
+"    NEVER guess these counts  -  always derive from the above comparison logic.\n" +
 "  Refund Request Date by learner: Date the LEARNER first raised the refund request with the OPS team  -  this is when the learner asked for a refund\n" +
 "  Request Date: Date the OPS team internally forwarded/raised the refund request to the FINANCE team  -  this is an internal ops step, different from when the learner asked\n" +
 "  Refund Date: Date the refund was actually processed and issued from the company's end to the learner  -  this is the final execution date\n\n" +
@@ -466,6 +471,7 @@ function buildPrompt() {
 "    Level-up, Edge-up LU, Edge-up SU, Step-up, Move-up LU, Pathway, Boost-up\n" +
 "    Course and Quarter columns BOTH exist in the Refunds tab  -  you CAN always break down refunds by Course + Quarter together. Example: TPM refunds in Q1 = filter Course=TPM AND Quarter=Q1 from the refunds data. Never say quarterly breakdown is not available for a course.\n" +
 "    ALL courses with refund counts (complete list):\n    Flagship ML=91 | EM=63 | TPM=58 | Machine Learning=43 | Product Management=30 | Fullstack=28 | Applied Agentic AI=27 | Backend=25 | Data Engineering=21 | Early Engineering=18 | Test Engineering=17 | AI Data Science=17 | Data Analyst=12 | Data Science=11 | Project-up=9 | SRE=6 | AWS Cloud=5 | Applied Gen AI=4 | Agentic AI Pathway=4 | Growth Product Manager=4 | Mentoring=3 | Security Engineering=3 | Embedded Systems=3 | Deep Learning=2 | Coding=2 | Career=2 | Embedded System=2 | Growth Product Management=1 | AI PM=1 | Android=1 | Frontend=1 | iOS=1 | Careers=1 | Agentic AI for everyone=1 | Agentic AI Architecture=1 | Advanced ML=1\n" +
+"  CRITICAL: The totals above are OVERALL totals across ALL months/quarters. When asked about a specific month or quarter, NEVER use the overall total. Always filter by Course AND Refund Month (or Quarter) together from the live data.\n" +
 "  EdgeUp = Edge-up LU + Edge-up SU combined across both BUs.\n" +
 "  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n" +
 "  Domain / Course: In the Refunds tab, Course column = the domain/course of the learner. This is the same as Domain in the Enrollments tab.\n\n" +
@@ -591,59 +597,7 @@ function buildPrompt() {
 " | Advanced ML=" + enrollData.filter(function(r){return get(r,"Program Type")==="Advanced ML";}).length +
 " | AgentUp=" + enrollData.filter(function(r){return get(r,"Program Type")==="AgentUp";}).length + " (and others)\n" +
 "  Domain: Specific program/course domain within Program Type. Equivalent to Course when asked about domain-wise analysis. Available in Enrollments tab.\n" +
-"  DOMAIN ENROLLMENT COUNTS BY QUARTER (use these exact numbers  -  do not guess or calculate):\n" +
-"    Machine Learning Program(total=582): Q1=120|Q2=151|Q3=194|Q4=117\n" +
-"    EdgeUp(total=493): Q1=176|Q2=142|Q3=71|Q4=104\n" +
-"    Step Up(total=469): Q1=145|Q2=132|Q3=136|Q4=56\n" +
-"    Advanced Machine Learning Program(total=282): Q1=74|Q2=76|Q3=85|Q4=47\n" +
-"    Applied Agentic AI For SWEs(total=265): Q1=0|Q2=98|Q3=89|Q4=78\n" +
-"    Applied Agentic AI(total=238): Q1=9|Q2=4|Q3=103|Q4=122\n" +
-"    Engineering Management(total=206): Q1=53|Q2=47|Q3=62|Q4=44\n" +
-"    Applied Agentic AI for SWEs(total=204): Q1=0|Q2=4|Q3=129|Q4=71\n" +
-"    Applied Gen AI(total=152): Q1=58|Q2=59|Q3=34|Q4=1\n" +
-"    Backend(total=136): Q1=33|Q2=34|Q3=46|Q4=23\n" +
-"    TPM(total=131): Q1=21|Q2=24|Q3=46|Q4=40\n" +
-"    Data Engineering(total=114): Q1=22|Q2=31|Q3=33|Q4=28\n" +
-"    Applied Agentic AI For Tech Professionals(total=113): Q1=0|Q2=47|Q3=66|Q4=0\n" +
-"    Fast Track ML(total=99): Q1=18|Q2=28|Q3=32|Q4=21\n" +
-"    ProjectUp(total=89): Q1=57|Q2=32|Q3=0|Q4=0\n" +
-"    Early Engineering(total=83): Q1=28|Q2=24|Q3=23|Q4=8\n" +
-"    Fullstack(total=81): Q1=12|Q2=24|Q3=29|Q4=16\n" +
-"    Data Analyst & Business Analyst(total=65): Q1=21|Q2=14|Q3=16|Q4=14\n" +
-"    Product Management(total=61): Q1=17|Q2=16|Q3=15|Q4=13\n" +
-"    Machine Learning(total=57): Q1=9|Q2=15|Q3=18|Q4=15\n" +
-"    AgentUp(total=57): Q1=1|Q2=47|Q3=7|Q4=2\n" +
-"    Data Science(total=50): Q1=20|Q2=9|Q3=12|Q4=9\n" +
-"    AI Data Science SwitchUp(total=49): Q1=26|Q2=12|Q3=11|Q4=0\n" +
-"    Test Engineering DSA(total=40): Q1=14|Q2=8|Q3=8|Q4=10\n" +
-"    New ML(total=39): Q1=1|Q2=3|Q3=6|Q4=29\n" +
-"    Career Skills Pathway(total=37): Q1=9|Q2=10|Q3=13|Q4=5\n" +
-"    Level Up(total=36): Q1=3|Q2=9|Q3=2|Q4=22\n" +
-"    Systems Design Pathway(total=35): Q1=5|Q2=12|Q3=13|Q4=5\n" +
-"    Coding Pathway(total=33): Q1=8|Q2=9|Q3=12|Q4=4\n" +
-"    SRE(total=31): Q1=4|Q2=11|Q3=10|Q4=6\n" +
-"    Boost Up(total=31): Q1=14|Q2=8|Q3=9|Q4=0\n" +
-"    Agentic AI Pathway For SWEs(total=29): Q1=0|Q2=9|Q3=15|Q4=5\n" +
-"    Fast Track Adv.ML(total=26): Q1=0|Q2=0|Q3=16|Q4=10\n" +
-"    Agentic SkillUp(total=24): Q1=0|Q2=1|Q3=0|Q4=23\n" +
-"    Embedded Systems(total=23): Q1=9|Q2=1|Q3=6|Q4=7\n" +
-"    Cloud(total=22): Q1=7|Q2=9|Q3=3|Q4=3\n" +
-"    Agentic AI Pathway For Tech Professionals(total=22): Q1=0|Q2=15|Q3=7|Q4=0\n" +
-"    Applied Agentic AI for EMs(total=19): Q1=0|Q2=0|Q3=0|Q4=19\n" +
-"    Security Engineering SysD(total=18): Q1=8|Q2=3|Q3=4|Q4=3\n" +
-"    Frontend(total=15): Q1=3|Q2=2|Q3=6|Q4=4\n" +
-"    Agentic AI Pathway(total=14): Q1=0|Q2=0|Q3=8|Q4=6\n" +
-"    AI Data Science Switchup(total=13): Q1=2|Q2=11|Q3=0|Q4=0\n" +
-"    EdgeUp Orientation(total=12): Q1=0|Q2=0|Q3=10|Q4=2\n" +
-"    Advanced ML(total=12): Q1=0|Q2=1|Q3=3|Q4=8\n" +
-"    Advanced Generative AI(total=12): Q1=9|Q2=3|Q3=0|Q4=0\n" +
-"    AI/DS SwitchUp(total=12): Q1=1|Q2=6|Q3=5|Q4=0\n" +
-"    Paid Upgrade(total=9): Q1=0|Q2=0|Q3=0|Q4=9\n" +
-"    MoveUp(total=8): Q1=0|Q2=5|Q3=2|Q4=1\n" +
-"    Growth Product Management(total=8): Q1=0|Q2=0|Q3=8|Q4=0\n" +
-"    Skill Up(total=6): Q1=6|Q2=0|Q3=0|Q4=0\n" +
-"    Security Engineering(total=3): Q1=1|Q2=0|Q3=2|Q4=0\n" +
-"  NOTE: All quarter counts above are for 2025. Use these exact numbers when asked about domain enrollments by quarter. Never guess.\n" +
+"  DOMAIN ENROLLMENT COUNTS BY QUARTER: Filter the Enrollments tab by Domain AND Quarter+Year together. The Domain and Quarter columns both exist in every enrollment row so any combination is always possible. Never guess  -  always derive from the data.\n" +
 "  Candidate ID: Internal candidate identifier\n" +
 "  Name: Learner full name\n" +
 "  HS ID / Email / HS ID: HubSpot CRM ID or learner email\n" +
