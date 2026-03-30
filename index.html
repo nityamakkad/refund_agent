@@ -348,6 +348,7 @@ function buildPrompt() {
 "  Summary: 2 of 3 courses saw a decrease in refunds after September.\n\n" +
 
 "RESPONSE STYLE RULES  -  VERY IMPORTANT:\n" +
+"0. NEVER end with or include lines like: 'the data does not directly indicate', 'the data cannot identify', 'this information is not available', or 'I cannot determine this'. These are unhelpful dead ends. If you have the numbers, state them and stop. If you need more context ask a specific question instead.\n" +
 "1. BE CONCISE. Managers and ops teams are busy. Give the numbers directly, no long explanations unless asked.\n" +
 "2. NEVER start a response with 'Based on the data' or 'In the data provided'  -  go straight to the answer.\n" +
 "3. NEVER add paragraph-long explanations about why two columns can't be cross-referenced. Just give the numbers from each column on separate lines.\n" +
@@ -368,14 +369,12 @@ function buildPrompt() {
 "BLANK VALUE RULE: For EVERY breakdown you provide, always mention blank/unknown count separately if any blanks exist. Example: 'US: 10, India: 5, Blank: 2'. Never silently drop blanks.\n" +
 "  Known blanks in Retention tab: Candidate ID=42 | Contact No.=45 | Time Zone=59 | Status=40 | payment_status=40 | Hubspot ID=1331 (Hubspot ID is mostly blank in retention tab  -  use Email or Name to identify learners instead).\n\n" +
 
-"OVERLAPPING COLUMNS RULE: Payment Mode, Payment Category, and Deposit/Receipt Date exist in BOTH tabs.\n" +
-"  DEPOSIT / RECEIPT DATE SPECIFICALLY:\n" +
-"    In Refunds tab: column is called 'Date of Receipt' = date learner paid their first deposit\n" +
-"    In Enrollments tab: column is called 'Deposit Paid Date' = same meaning, date learner paid first deposit\n" +
-"    These mean the same thing but are in different tabs. If someone asks 'how many learners paid first deposit in January' or 'how many paid deposit in January'  -  this is AMBIGUOUS. ALWAYS ask: do you mean from the Refunds tab or the Enrollments tab?\n" +
-"    If they clarify Refunds tab: extract month from 'Date of Receipt' column (format MM/DD/YYYY) by checking if month part = 1 for January, 2 for February etc. January 2025 from Refunds tab = 31 learners, January all years = 32.\n" +
-"    If they clarify Enrollments tab: use 'Enrollment Month' or 'Enrollment Month and Year' column directly.\n" +
-"  For other overlapping columns (Payment Mode, Payment Category): ask which tab if genuinely ambiguous.\n\n" +
+"OVERLAPPING COLUMNS RULE (ask for clarification ONLY when genuinely ambiguous  -  do not ask unnecessarily):\n" +
+"  Deposit/Receipt Date: In Refunds = Date of Receipt | In Enrollments = Deposit Paid Date. Ask which tab only if the question could apply to either (e.g. generic deposit date question). If question is clearly about refunded learners use Refunds tab. If clearly about all enrollments use Enrollments tab.\n" +
+"  Payment Mode: exists in both tabs. If question is about refunds context use Refunds tab. If about enrollments context use Enrollments tab. Only ask if truly unclear.\n" +
+"  OB Status: In Refunds tab = onboarding status of refunded learners only. In Enrollments tab = onboarding status of all learners. If question says 'learners' generally = Enrollments tab. If context is about refunds = Refunds tab.\n" +
+"  Payment Category: Refunds tab uses Upfront Payment (Yes/No) column. Enrollments tab has Payment Category column. Context usually makes it clear which one to use.\n" +
+"  RULE: Use context to infer the right tab. Only ask for clarification if after reading the question carefully you genuinely cannot determine which tab is meant.\n\n" +
 
 "CHART FORMAT: If asked to show a chart, respond in this exact pipe format on one line:\n" +
 "CHART|bar|Chart Title|Label1,Label2,Label3|10,20,30\n" +
@@ -505,8 +504,8 @@ function buildPrompt() {
 "  'Student Retained / Dropped - For Retention' = Ops/Operations team's perspective for retention calculation\n" +
 "    Dropped=" + countVal("Student Retained / Dropped - For Retention","Dropped") + " | Retained=" + countVal("Student Retained / Dropped - For Retention","Retained") + " | Blank=" + sheetData.filter(function(r){return !get(r,"Student Retained / Dropped - For Retention");}).length + "\n" +
 "  These are two independent columns tracked by two different teams. Do NOT attempt to cross-reference or compare them row by row.\n" +
-"  When asked a question involving both columns (e.g. 'dropped by sales but retained by ops'), simply state the counts from each column separately and clearly  -  do not draw any conclusions about overlap, do not say there is no overlap, do not say the data cannot identify this. Just report each column's numbers confidently and separately.\n" +
-"  Always clarify which column when someone explicitly asks about retained/dropped from a sales or ops perspective  -  sales view vs ops view are different.\n\n" +
+"  When asked a question involving both columns (e.g. 'dropped by sales but retained by ops'), simply state the counts from each column separately and clearly. Never say the data cannot identify this or that there is no overlap  -  just report the numbers from each column and stop there.\n" +
+"  Only ask which column if someone explicitly says 'sales view' or 'ops view' and you need to confirm  -  do not ask unnecessarily.\n\n" +
 
 "GENERAL RETAINED CALCULATION (default meaning of 'retained' unless explicitly asked about the column):\n" +
 "  Retained = Enrollments minus Refunds for the same period (quarter, month, or overall)\n" +
@@ -639,7 +638,7 @@ function buildPrompt() {
 "  These are two different people sometimes  -  current vs original.\n\n" +
 
 "OB STATUS  -  EXISTS IN BOTH REFUNDS AND ENROLLMENTS TABS:\n" +
-"  When asked about OB Status without specifying which tab, ask: are you referring to OB Status from the Enrollments tab or the Refunds tab? They are different datasets.\n" +
+"  When asked about OB Status, use context to determine the right tab. Questions about all learners/enrollments = Enrollments tab. Questions in context of refunds = Refunds tab. Only ask for clarification if truly ambiguous after reading the question carefully.\n" +
 "  Enrollments tab OB STATUS = onboarding status of all enrolled learners (4701 records).\n" +
 "  Refunds tab OB Status = onboarding status of only refunded learners (522 records).\n" +
 "  Only 'Onboarded' = successfully onboarded. Everything else = not onboarded.\n" +
@@ -1472,7 +1471,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
     <div class="logo">📊</div>
     <div>
       <h1 style="font-size:18px;font-weight:700;color:#ffffff">Enrollment & Refund Intelligence Agent</h1>
-      <p style="font-size:11px;color:#a0aec0">Enrollments + Refunds · 2025</p>
+      <p style="font-size:11px;color:#a0aec0">Live from Google Sheets · Enrollments + Refunds · 2025</p>
     </div>
   </div>
   <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -1527,7 +1526,7 @@ window.addEventListener("DOMContentLoaded", function(){ fetchSheet(); });
   <div id="messages" class="messages">
     <div class="empty">
       <div style="font-size:52px;margin-bottom:12px">🤖</div>
-      <p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund or enrollment data.<br/></p>
+      <p style="font-size:15px;color:#718096;line-height:1.6">Ask me anything about your refund or enrollment data.<br/>I read live from your Google Sheet.</p>
     </div>
   </div>
   <div id="loadingDots" class="dots">
