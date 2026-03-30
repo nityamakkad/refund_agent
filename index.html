@@ -335,6 +335,18 @@ function buildPrompt() {
 // ─────────────────────────────────────────────
 "You are an expert EdTech Data Analyst AI for an online education company. You answer questions STRICTLY based on the live data provided below. Never make up numbers, trends, or facts.\n\n" +
 
+"ANALYSIS RESPONSE RULES  -  for trend/comparison/increase-decrease questions:\n" +
+"  When asked about increase/decrease or before/after comparisons for multiple items:\n" +
+"  1. Always use QUERY blocks with compare operation to get exact numbers first\n" +
+"  2. Structure the answer as: Item | Before | After | Change | % Change | Trend\n" +
+"  3. Always calculate % change = (After - Before) / Before * 100\n" +
+"  4. State clearly: Increased / Decreased / No Change with exact delta\n" +
+"  5. End with a 1-line summary of the overall pattern\n" +
+"  Example format:\n" +
+"  TPM:  Before Sep = X | Sep onwards = Y | Change = +Z (A%) - Increased\n" +
+"  EM:   Before Sep = X | Sep onwards = Y | Change = -Z (A%) - Decreased\n" +
+"  Summary: 2 of 3 courses saw a decrease in refunds after September.\n\n" +
+
 "RESPONSE STYLE RULES  -  VERY IMPORTANT:\n" +
 "1. BE CONCISE. Managers and ops teams are busy. Give the numbers directly, no long explanations unless asked.\n" +
 "2. NEVER start a response with 'Based on the data' or 'In the data provided'  -  go straight to the answer.\n" +
@@ -723,9 +735,206 @@ function buildPrompt() {
 }
 
 // ─────────────────────────────────────────────
+// DATA QUERY ENGINE
+// AI requests data via JSON, JS computes it exactly
+// ─────────────────────────────────────────────
+
+// Normalise a value for case-insensitive comparison
+function norm(v) { return (v||"").toString().trim().toLowerCase(); }
+
+// Parse a QUERY block from AI response
+// Format: QUERY{...json...}
+function tryParseQuery(text) {
+  try {
+    var t = text.trim();
+    var qi = t.indexOf("QUERY{");
+    if (qi === -1) return null;
+    var start = qi + 5; // points to {
+    // Find matching closing brace
+    var depth = 0, end = -1;
+    for (var i = start; i < t.length; i++) {
+      if (t[i] === "{") depth++;
+      else if (t[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+    }
+    if (end === -1) return null;
+    var json = t.substring(start, end + 1);
+    var q = JSON.parse(json);
+    // Also capture any text before/after the query block
+    q._textBefore = t.substring(0, qi).trim();
+    q._textAfter  = t.substring(end + 1).trim();
+    return q;
+  } catch(e) { return null; }
+}
+
+// Apply filters to a dataset row
+// filters: [ {col, op, val} ] op: eq, neq, in, contains, lt, gt, blank, notblank
+function applyFilters(rows, filters) {
+  if (!filters || !filters.length) return rows;
+  return rows.filter(function(r) {
+    return filters.every(function(f) {
+      var rv = norm(get(r, f.col));
+      var fv = norm(f.val || "");
+      switch(f.op) {
+        case "eq":       return rv === fv;
+        case "neq":      return rv !== fv;
+        case "in":       return (f.vals||[]).map(norm).indexOf(rv) !== -1;
+        case "contains": return rv.indexOf(fv) !== -1;
+        case "lt":       return parseFloat(rv) < parseFloat(fv);
+        case "gt":       return parseFloat(rv) > parseFloat(fv);
+        case "blank":    return rv === "";
+        case "notblank": return rv !== "";
+        // Date comparisons: before/after a month
+        case "before_month":
+          var mo = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+          return mo.indexOf(rv) < mo.indexOf(fv);
+        case "from_month":
+          var mo2 = ["january","february","march","april","may","june","july","august","september","october","november","december"];
+          return mo2.indexOf(rv) >= mo2.indexOf(fv);
+        // Date comparison: refund request date vs orientation/first class date
+        case "before_col": {
+          var d1 = new Date(get(r, f.col));
+          var d2 = new Date(get(r, f.val));
+          if (isNaN(d2)) return true; // blank target col = counts as before
+          return isNaN(d1) ? false : d1 < d2;
+        }
+        case "after_col": {
+          var d3 = new Date(get(r, f.col));
+          var d4 = new Date(get(r, f.val));
+          if (isNaN(d4)) return false;
+          return isNaN(d3) ? false : d3 >= d4;
+        }
+        default: return true;
+      }
+    });
+  });
+}
+
+// Execute a query object against the data
+// Returns a plain-text result string
+function executeQuery(q) {
+  // Select dataset
+  var dataset = q.dataset || "refunds";
+  var baseData;
+  if (dataset === "refunds")     baseData = sheetData;
+  else if (dataset === "enrollments") baseData = enrollData;
+  else if (dataset === "retention")   baseData = retentionData;
+  else return "Unknown dataset: " + dataset;
+
+  // Apply filters
+  var filtered = applyFilters(baseData, q.filters || []);
+
+  // Execute operation
+  var op = q.operation || "count";
+  var result = "";
+
+  if (op === "count") {
+    result = String(filtered.length);
+
+  } else if (op === "groupby") {
+    // Group by one or two columns and count
+    var gcols = Array.isArray(q.groupby) ? q.groupby : [q.groupby];
+    var counts = {};
+    filtered.forEach(function(r) {
+      var key = gcols.map(function(c){ return get(r,c)||"Blank"; }).join(" | ");
+      counts[key] = (counts[key]||0) + 1;
+    });
+    var entries = Object.entries(counts).sort(function(a,b){ return b[1]-a[1]; });
+    if (q.limit) entries = entries.slice(0, q.limit);
+    result = entries.map(function(e){ return e[0]+": "+e[1]; }).join("\n");
+
+  } else if (op === "sum") {
+    var col = q.column;
+    var total = filtered.reduce(function(s,r){ return s + parseAmt(get(r,col)); }, 0);
+    result = total.toLocaleString();
+
+  } else if (op === "compare") {
+    // Compare two filter sets side by side
+    // q.compare = [ {label, filters}, {label, filters} ]
+    var parts = (q.compare||[]).map(function(c) {
+      var sub = applyFilters(baseData, c.filters||[]);
+      return c.label + ": " + sub.length;
+    });
+    result = parts.join("\n");
+
+  } else if (op === "rate") {
+    // numerator count / denominator count * 100
+    var num = applyFilters(baseData, q.numerator_filters||[]).length;
+    var den = applyFilters(baseData, q.denominator_filters||[]).length;
+    var rate = den > 0 ? (num/den*100).toFixed(1)+"%" : "N/A";
+    result = num + " / " + den + " = " + rate;
+
+  } else if (op === "cross") {
+    // Cross two datasets - e.g. refunds matched against enrollments by invoice/hubspot
+    // q.match_col = column to match on, q.dataset2 = second dataset
+    var d2 = q.dataset2 === "enrollments" ? enrollData : sheetData;
+    var matchCol = q.match_col || "Invoice No.";
+    var matchVals = new Set(filtered.map(function(r){ return norm(get(r,matchCol)); }).filter(Boolean));
+    var matched = applyFilters(d2, q.filters2||[]).filter(function(r){
+      return matchVals.has(norm(get(r, q.match_col2||matchCol)));
+    });
+    result = "Matched: " + matched.length;
+
+  } else {
+    result = "Unknown operation: " + op;
+  }
+
+  return result;
+}
+
+// Build the data query system prompt addon
+function buildQuerySystemAddon() {
+  return "\n\nDATA QUERY ENGINE:\n" +
+"You have access to a JavaScript query engine running in the browser against the live data.\n" +
+"For ANY question requiring a count, breakdown, comparison, or calculation - use a QUERY block.\n" +
+"The engine will execute it and return exact results. Never guess or estimate numbers.\n\n" +
+"QUERY FORMAT: Respond with QUERY{...json...} anywhere in your response.\n" +
+"After the query result is returned, format it into a clean answer.\n\n" +
+"DATASETS: 'refunds' (522 rows), 'enrollments' (4701 rows), 'retention' (retentionData rows)\n\n" +
+"FILTER OPERATORS: eq, neq, in, contains, blank, notblank, before_month, from_month, before_col, after_col\n\n" +
+"REFUNDS COLUMNS: Course, BU, Category, Quarter, Year, Refund Month, Refund Month and Year,\n" +
+"  Payment Mode, Refund Category, Upfront Payment (Yes / No), Refund Stage, PA, Manager,\n" +
+"  New / Alumni, OB Status, Refund Request Date  by learner, Orientation Date, First Class Date,\n" +
+"  Duration Bucket, Region, Deposit also refunded, Refund request received in Trial Window,\n" +
+"  Eligible as per refund policy, Sale Retained / Dropped, Student Retained / Dropped - For Retention\n\n" +
+"ENROLLMENT COLUMNS: Program Type, Domain, Quarter, Year, Enrollment Month, Payment Category,\n" +
+"  Live Status, OB STATUS, Current SSA, Payment Mode\n\n" +
+"EXAMPLES:\n" +
+"Q: How many TPM refunds before September?\n" +
+'QUERY{"dataset":"refunds","operation":"count","filters":[{"col":"Course","op":"eq","val":"TPM"},{"col":"Refund Month","op":"before_month","val":"september"}]}\n' +
+"Q: Compare TPM refunds before vs from September:\n" +
+'QUERY{"dataset":"refunds","operation":"compare","compare":[{"label":"Before Sep","filters":[{"col":"Course","op":"eq","val":"TPM"},{"col":"Refund Month","op":"before_month","val":"september"}]},{"label":"Sep onwards","filters":[{"col":"Course","op":"eq","val":"TPM"},{"col":"Refund Month","op":"from_month","val":"september"}]}]}\n' +
+"Q: Refunds by quarter for EM:\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Quarter","filters":[{"col":"Course","op":"eq","val":"EM"}]}\n' +
+"Q: How many refunded before first live class:\n" +
+'QUERY{"dataset":"refunds","operation":"count","filters":[{"col":"Refund Request Date  by learner","op":"before_col","val":"First Class Date"}]}\n' +
+"Q: Enrollment count by domain in Q1:\n" +
+'QUERY{"dataset":"enrollments","operation":"groupby","groupby":"Domain","filters":[{"col":"Quarter","op":"eq","val":"Q1"},{"col":"Year","op":"eq","val":"2025"}]}\n' +
+"Q: Refund rate for Fullstack (refunds/enrollments):\n" +
+'QUERY{"dataset":"refunds","operation":"count","filters":[{"col":"Course","op":"eq","val":"Fullstack"}]} and QUERY{"dataset":"enrollments","operation":"count","filters":[{"col":"Domain","op":"eq","val":"Fullstack"}]}\n\n' +
+"IMPORTANT: You can include multiple QUERY blocks in one response for comparisons.\n" +
+"Results are injected back with label [QUERY_RESULT: ...] and you then write the final answer.\n" +
+"\nFOR INCREASE/DECREASE QUESTIONS across multiple items, issue one compare query per item. Example for 3 courses before/after September:\n" +
+"QUERY{\"dataset\":\"refunds\",\"operation\":\"compare\",\"compare\":[{\"label\":\"TPM Before Sep\",\"filters\":[{\"col\":\"Course\",\"op\":\"eq\",\"val\":\"TPM\"},{\"col\":\"Refund Month\",\"op\":\"before_month\",\"val\":\"september\"}]},{\"label\":\"TPM Sep onwards\",\"filters\":[{\"col\":\"Course\",\"op\":\"eq\",\"val\":\"TPM\"},{\"col\":\"Refund Month\",\"op\":\"from_month\",\"val\":\"september\"}]}]}\n" +
+"Then use the results to calculate % change = (After-Before)/Before*100 and state Increased/Decreased clearly.\n";
+}
+
+// ─────────────────────────────────────────────
 // SEND TO CLAUDE
 // ─────────────────────────────────────────────
 var isBusy = false;
+
+async function callAPI(systemPrompt, msgs) {
+  var res = await fetch("/api/claude", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ system: systemPrompt, messages: msgs })
+  });
+  var data = await res.json();
+  if (data.content && data.content[0] && data.content[0].text) return data.content[0].text;
+  if (data.error) return "API Error: " + (data.error.message || JSON.stringify(data.error));
+  return "No response received.";
+}
+
 async function sendMessage(prefill) {
   if (isBusy) return;
   var input = document.getElementById("chatInput");
@@ -740,30 +949,54 @@ async function sendMessage(prefill) {
   setLoading(true);
 
   try {
-    var requestBody = {
-      system: buildPrompt(),
-      messages: messages
-    };
+    var systemPrompt = buildPrompt() + buildQuerySystemAddon();
 
-    var res = await fetch("/api/claude", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(requestBody)
-    });
+    // PASS 1: AI responds — may contain QUERY blocks
+    var pass1 = await callAPI(systemPrompt, messages);
 
-    var data = await res.json();
+    // Check for QUERY blocks and execute them
+    var finalReply = pass1;
+    var queryFound = false;
+    var queryResults = [];
+    var tempText = pass1;
 
-    var reply = "";
-    if (data.content && data.content[0] && data.content[0].text) {
-      reply = data.content[0].text;
-    } else if (data.error) {
-      reply = "API Error: " + (data.error.message || JSON.stringify(data.error));
-    } else {
-      reply = "No response received. Check console for details.";
+    // Execute all QUERY blocks found
+    var qi;
+    var safetyLimit = 10;
+    while ((qi = tempText.indexOf("QUERY{")) !== -1 && safetyLimit-- > 0) {
+      var q = tryParseQuery(tempText);
+      if (!q) break;
+      var qResult = executeQuery(q);
+      queryResults.push({ query: JSON.stringify(q).substring(0, 100), result: qResult });
+      queryFound = true;
+      // Remove this QUERY block from tempText to find next one
+      var blockStart = tempText.indexOf("QUERY{");
+      var depth = 0, blockEnd = -1;
+      for (var ci = blockStart + 5; ci < tempText.length; ci++) {
+        if (tempText[ci] === "{") depth++;
+        else if (tempText[ci] === "}") { depth--; if (depth === 0) { blockEnd = ci; break; } }
+      }
+      if (blockEnd === -1) break;
+      tempText = tempText.substring(0, blockStart) + "[COMPUTED]" + tempText.substring(blockEnd + 1);
     }
-    messages.push({ role: "assistant", content: reply });
+
+    if (queryFound && queryResults.length > 0) {
+      // PASS 2: Send query results back to AI for final formatting
+      var resultsText = "Here are the exact computed results from the live data:\n" +
+        queryResults.map(function(r, i){ return "[QUERY_RESULT_"+(i+1)+"]: " + r.result; }).join("\n") +
+        "\n\nBased on these exact numbers, please give the final clean answer to the user's question. Do not perform any calculations yourself - use only the numbers above.";
+
+      var pass2Messages = messages.concat([
+        { role: "assistant", content: pass1 },
+        { role: "user", content: resultsText }
+      ]);
+      finalReply = await callAPI(systemPrompt, pass2Messages);
+    }
+
+    messages.push({ role: "assistant", content: finalReply });
+
   } catch(e) {
-    console.error("Claude fetch error:", e);
+    console.error("API fetch error:", e);
     messages.push({ role: "assistant", content: "Connection error: " + e.message });
   }
 
