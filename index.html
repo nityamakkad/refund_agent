@@ -678,8 +678,11 @@ function buildPrompt() {
 "  Original SSA: The SSA who first onboarded the learner\n" +
 "  These are two different people sometimes  -  current vs original.\n\n" +
 
-"OB STATUS (Enrollment Tab):\n" +
-"  Only 'Onboarded' = successfully onboarded. Everything else = not successfully onboarded.\n" +
+"OB STATUS  -  EXISTS IN BOTH REFUNDS AND ENROLLMENTS TABS:\n" +
+"  When asked about OB Status without specifying which tab, ask: are you referring to OB Status from the Enrollments tab or the Refunds tab? They are different datasets.\n" +
+"  Enrollments tab OB STATUS = onboarding status of all enrolled learners (4701 records).\n" +
+"  Refunds tab OB Status = onboarding status of only refunded learners (522 records).\n" +
+"  Only 'Onboarded' = successfully onboarded. Everything else = not onboarded.\n" +
 "  Onboarded=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length +
 " | VM - 4 Attempts=" + enrollData.filter(function(r){return get(r,"OB STATUS")==="VM - 4 Attempts";}).length +
 " | Incomplete OB=" + enrollData.filter(function(r){return get(r,"OB STATUS").indexOf("Incomplete OB")===0;}).length +
@@ -690,17 +693,26 @@ function buildPrompt() {
 " | Blank=" + enrollData.filter(function(r){return !get(r,"OB STATUS");}).length + " (other misc statuses exist)\n" +
 "  OB SUCCESS RATE FORMULA: Onboarded count / Total enrollments × 100. NEVER use total enrollments as onboarded count.\n" +
 "  Overall OB Success Rate: " + enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length + " / " + enrollData.length + " = " + (enrollData.length > 0 ? (enrollData.filter(function(r){return get(r,"OB STATUS")==="Onboarded";}).length / enrollData.length * 100).toFixed(1) : "N/A") + "%\n" +
-"  MONTHWISE OB SUCCESS RATE (use Enrollment Month column):\n" +
+"  QUARTERLY OB SUCCESS RATE (use Quarter column  -  for quarter-wise questions use ONLY these numbers):\n" +
 (function(){
-  var months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-  return months.map(function(m){
-    var total = enrollData.filter(function(r){return get(r,"Enrollment Month")===m;}).length;
-    var onboarded = enrollData.filter(function(r){return get(r,"Enrollment Month")===m && get(r,"OB STATUS")==="Onboarded";}).length;
-    var notOnboarded = total - onboarded;
-    var rate = total > 0 ? (onboarded/total*100).toFixed(1) : "0";
-    return "    "+m+": Total="+total+" | Onboarded="+onboarded+" | Not Onboarded="+notOnboarded+" | Rate="+rate+"%";
+  var quarters=["Q1","Q2","Q3","Q4"];
+  return quarters.map(function(q){
+    var total=enrollData.filter(function(r){return get(r,"Quarter")===q&&get(r,"Year")==="2025";}).length;
+    var onboarded=enrollData.filter(function(r){return get(r,"Quarter")===q&&get(r,"Year")==="2025"&&get(r,"OB STATUS")==="Onboarded";}).length;
+    var rate=total>0?(onboarded/total*100).toFixed(1):"0";
+    return "    "+q+" 2025: Total="+total+" | Onboarded="+onboarded+" | Not Onboarded="+(total-onboarded)+" | Rate="+rate+"%";
   }).join("\n");
-})() + "\n\n" +
+})() + "\n" +
+"  MONTHWISE OB SUCCESS RATE (use Enrollment Month column  -  for month-wise questions only):\n" +
+(function(){
+  var months=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  return months.map(function(m){
+    var total=enrollData.filter(function(r){return get(r,"Enrollment Month")===m;}).length;
+    var onboarded=enrollData.filter(function(r){return get(r,"Enrollment Month")===m&&get(r,"OB STATUS")==="Onboarded";}).length;
+    var rate=total>0?(onboarded/total*100).toFixed(1):"0";
+    return "    "+m+": Total="+total+" | Onboarded="+onboarded+" | Not Onboarded="+(total-onboarded)+" | Rate="+rate+"%";
+  }).join("\n");
+})() + "\n  CRITICAL: NEVER mix up months and quarters. Quarter = Q1/Q2/Q3/Q4. Month = January/February etc. Use the correct breakdown above based on what is asked.\n\n" +
 
 // ─────────────────────────────────────────────
 // CROSS-TAB: REFUND RATE
