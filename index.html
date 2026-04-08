@@ -28,7 +28,13 @@
   .card h3{font-size:12px;color:#1e40af;font-weight:600;margin-bottom:8px}
   .messages{flex:1;overflow-y:auto;background:#e8edf2;border-radius:12px;padding:16px;border:1px solid #cbd5e0;display:flex;flex-direction:column;gap:10px}
   .msg-user{background:linear-gradient(135deg,#3b82f6,#2563eb);border-radius:16px 16px 4px 16px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-end;max-width:82%;white-space:pre-wrap;word-break:break-word;color:#fff}
-  .msg-ai{background:#ffffff;border:1px solid #cbd5e0;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:82%;white-space:pre-wrap;word-break:break-word}
+  .msg-ai{background:#ffffff;border:1px solid #cbd5e0;border-radius:16px 16px 16px 4px;padding:10px 15px;font-size:13px;line-height:1.65;align-self:flex-start;max-width:92%;word-break:break-word}
+  .msg-ai table{border-collapse:collapse;width:100%;margin:8px 0;font-size:12px}
+  .msg-ai th{background:#1a1040;color:#fff;padding:8px 12px;text-align:left;font-size:11px;font-weight:700;white-space:nowrap}
+  .msg-ai td{padding:7px 12px;border-bottom:1px solid #e2e8f0;color:#1a202c}
+  .msg-ai tr:nth-child(even) td{background:#f8fafc}
+  .msg-ai strong{font-weight:700;color:#1a202c}
+  .msg-ai p{margin:4px 0}
   .msg-label{font-size:10px;color:#1a56db;font-weight:700;margin-bottom:4px;letter-spacing:.5px}
   .input-row{display:flex;gap:10px}
   .chat-input{flex:1;background:#ffffff;border:1px solid #cbd5e0;color:#1a202c;border-radius:10px;padding:11px 16px;font-size:13px}
@@ -1031,6 +1037,57 @@ function tryParseChart(text) {
   return null;
 }
 
+function formatAIText(text) {
+  // Convert markdown table to HTML table
+  var lines = text.split("\n");
+  var output = [];
+  var inTable = false;
+  var tableRows = [];
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    // Detect table row (starts and ends with |)
+    if (line.trim().match(/^\|.+\|$/)) {
+      // Skip separator rows like |---|---|
+      if (line.trim().match(/^\|[\s\-:|]+\|$/)) {
+        continue;
+      }
+      if (!inTable) { inTable = true; tableRows = []; }
+      var cells = line.trim().slice(1,-1).split('|').map(function(c){ return c.trim(); });
+      tableRows.push(cells);
+    } else {
+      if (inTable) {
+        // Flush table
+        var html = '<div style="overflow-x:auto;margin:8px 0"><table>';
+        tableRows.forEach(function(row, ri) {
+          var tag = ri === 0 ? 'th' : 'td';
+          html += '<tr>' + row.map(function(c){ return '<'+tag+'>'+c+'</'+tag+'>'; }).join('') + '</tr>';
+        });
+        html += '</table></div>';
+        output.push(html);
+        inTable = false; tableRows = [];
+      }
+      // Convert **bold**
+      var formatted = line
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/&lt;strong&gt;/g,'<strong>').replace(/&lt;\/strong&gt;/g,'</strong>');
+      output.push(formatted);
+    }
+  }
+  // Flush any remaining table
+  if (inTable && tableRows.length) {
+    var html2 = '<div style="overflow-x:auto;margin:8px 0"><table>';
+    tableRows.forEach(function(row, ri) {
+      var tag2 = ri === 0 ? 'th' : 'td';
+      html2 += '<tr>' + row.map(function(c){ return '<'+tag2+'>'+c+'</'+tag2+'>'; }).join('') + '</tr>';
+    });
+    html2 += '</table></div>';
+    output.push(html2);
+  }
+  return output.join("\n").replace(/\n/g, "<br>");
+}
+
 function renderMessages() {
   var box = document.getElementById("messages");
   if (!box) return;
@@ -1055,8 +1112,8 @@ function renderMessages() {
         '<div style="background:#f7fafc;border-radius:8px;padding:10px">' +
         '<canvas id="' + cid + '" height="95"></canvas></div></div>';
     }
-    var safe2 = text.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
-    return '<div class="msg-ai"><div class="msg-label">AI ANALYST</div>' + safe2 + '</div>';
+    var formatted2 = formatAIText(text);
+    return '<div class="msg-ai"><div class="msg-label">AI ANALYST</div>' + formatted2 + '</div>';
   }).join("");
   var last = box.lastElementChild;
   if (last) last.scrollIntoView({ behavior: "smooth" });
