@@ -892,8 +892,11 @@ function buildQuerySystemAddon() {
 "You have access to a JavaScript query engine running in the browser against the live data.\n" +
 "For ANY question requiring a count, breakdown, comparison, or calculation - use a QUERY block.\n" +
 "The engine will execute it and return exact results. Never guess or estimate numbers.\n\n" +
-"QUERY FORMAT: Respond with QUERY{...json...} anywhere in your response.\n" +
-"After the query result is returned, format it into a clean answer.\n\n" +
+"QUERY FORMAT: For ANY question needing data counts or breakdowns:\n" +
+"  PASS 1: Output ONLY the QUERY{} block(s) needed. Do NOT write any answer text, lists, or explanations before the queries. Just the query block(s).\n" +
+"  PASS 2: After query results are returned, format them into a clean final answer.\n" +
+"  If a table is requested or makes sense, use markdown table format with | separators.\n" +
+"  Exception: For simple factual questions already answered by the prompt summary, you may answer directly without a query.\n\n" +
 "DATASETS: 'refunds' (522 rows), 'enrollments' (4701 rows), 'retention' (retentionData rows)\n\n" +
 "FILTER OPERATORS: eq, neq, in, contains, blank, notblank, before_month, from_month, before_col, after_col\n\n" +
 "REFUNDS COLUMNS: Course, BU, Category, Quarter, Year, Refund Month, Refund Month and Year,\n" +
@@ -997,9 +1000,13 @@ async function sendMessage(prefill) {
 
     if (queryFound && queryResults.length > 0) {
       // PASS 2: Send query results back to AI for final formatting
+      var isTableQuestion = /table|list.*all|all.*list|quarter.wise|quarter wise|breakdown|all program|all course|all domain/i.test(text);
+      var formatInstruction = isTableQuestion
+        ? "\n\nPresent the answer as a clean markdown table with | separators. Include ALL items from the data  -  do not truncate. Column headers should be clear. Do not add any text before or after the table except a one-line summary."
+        : "\n\nBased on these exact numbers, give a concise clean answer. Do not perform any calculations yourself - use only the numbers above.";
       var resultsText = "Here are the exact computed results from the live data:\n" +
         queryResults.map(function(r, i){ return "[QUERY_RESULT_"+(i+1)+"]: " + r.result; }).join("\n") +
-        "\n\nBased on these exact numbers, please give the final clean answer to the user's question. Do not perform any calculations yourself - use only the numbers above.";
+        formatInstruction;
 
       var pass2Messages = messages.concat([
         { role: "assistant", content: pass1 },
