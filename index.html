@@ -915,7 +915,17 @@ function buildQuerySystemAddon() {
 "Q: Enrollment count by domain in Q1:\n" +
 'QUERY{"dataset":"enrollments","operation":"groupby","groupby":"Domain","filters":[{"col":"Quarter","op":"eq","val":"Q1"},{"col":"Year","op":"eq","val":"2025"}]}\n' +
 "Q: Refund rate for Fullstack (refunds/enrollments):\n" +
-'QUERY{"dataset":"refunds","operation":"count","filters":[{"col":"Course","op":"eq","val":"Fullstack"}]} and QUERY{"dataset":"enrollments","operation":"count","filters":[{"col":"Domain","op":"eq","val":"Fullstack"}]}\n\n' +
+'QUERY{"dataset":"refunds","operation":"count","filters":[{"col":"Course","op":"eq","val":"Fullstack"}]} and QUERY{"dataset":"enrollments","operation":"count","filters":[{"col":"Domain","op":"eq","val":"Fullstack"}]}\n' +
+"Q: All courses with refund count (no filter needed  -  groupby returns everything):\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Course"}\n' +
+"Q: Quarter-wise table for all domains with enrollments AND refunds:\n" +
+'QUERY{"dataset":"enrollments","operation":"groupby","groupby":["Domain","Quarter"]} and QUERY{"dataset":"refunds","operation":"groupby","groupby":["Course","Quarter"]}\n\n' +
+"CRITICAL RULES FOR GROUPBY QUERIES:\n" +
+"1. When asked for ALL courses, ALL domains, or ALL program types  -  do NOT add a course/domain/program type filter. Just groupby that column with no filter (or only date/quarter filters). The engine returns every unique value automatically.\n" +
+"   WRONG: groupby Course with filter Course=in[TPM,EM,Fullstack...]  -  this misses courses\n" +
+"   RIGHT: groupby Course with no course filter  -  this returns all 38 courses\n" +
+"2. Never hardcode a list of courses/domains from the prompt when building queries. Always let the groupby discover all values from live data.\n" +
+"3. For cross-tab tables (enrollments + refunds by domain/quarter), issue separate groupby queries for each dataset and combine in the answer.\n\n" +
 "IMPORTANT: You can include multiple QUERY blocks in one response for comparisons.\n" +
 "Results are injected back with label [QUERY_RESULT: ...] and you then write the final answer.\n" +
 "\nFOR INCREASE/DECREASE QUESTIONS across multiple items, issue one compare query per item. Example for 3 courses before/after September:\n" +
