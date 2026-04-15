@@ -486,6 +486,11 @@ function buildPrompt() {
 "  CRITICAL: The totals above are OVERALL totals across ALL months/quarters. When asked about a specific month or quarter, NEVER use the overall total. Always filter by Course AND Refund Month (or Quarter) together from the live data.\n" +
 "  EdgeUp = Edge-up LU + Edge-up SU combined across both BUs.\n" +
 "  Region: US=" + countVal("Region","US") + " | India=0 (India data to be added in future) | Blank=" + sheetData.filter(function(r){return !get(r,"Region");}).length + "\n" +
+"  VISA STATUS (new column  -  column AX in refunds sheet):\n" +
+"    Did not fill the form=" + sheetData.filter(function(r){return get(r,"Visa Status")==="Did not fill the form";}).length + " | US Citizen=" + sheetData.filter(function(r){return get(r,"Visa Status")==="US Citizen";}).length + " | H-1B=" + sheetData.filter(function(r){return get(r,"Visa Status")==="H-1B";}).length + " | Green Card Holder / Permanent Resident=" + sheetData.filter(function(r){return get(r,"Visa Status")==="Green Card Holder / Permanent Resident";}).length + " | Other form of EAD=" + sheetData.filter(function(r){return get(r,"Visa Status")==="Other form of EAD";}).length + " | F1 / OPT=" + sheetData.filter(function(r){return get(r,"Visa Status")==="F1 / OPT";}).length + " | Not authorized but seeking sponsorship=" + sheetData.filter(function(r){return get(r,"Visa Status")==="Not authorized but seeking sponsorship";}).length + " | Blank/Did not fill=" + sheetData.filter(function(r){return !get(r,"Visa Status")||get(r,"Visa Status")==="Did not fill the form";}).length + "\n" +
+"    NOTE: Most learners (611) did not fill the visa form. For visa analysis, focus on the 81 who did fill it.\n" +
+"    VISA ANALYSIS INSIGHTS: H-1B has 25 refunds  -  21 in Q1, 4 in Q4. H-1B top refund categories: Content/curriculum=5, Work commitments=4. US Citizens have 29 refunds spread across quarters. Green Card holders have 12 refunds, mostly EM and TPM courses.\n" +
+"    When asked about visa analysis, break down by: which visa status has most refunds, which quarter, which refund category, which course, which month  -  use QUERY engine with Visa Status column filter.\n\n" +
 "  Domain / Course: In the Refunds tab, Course column = the domain/course of the learner. This is the same as Domain in the Enrollments tab.\n\n" +
 
 "DOMAIN / COURSE REFUND PERCENTAGE  -  ALWAYS CLARIFY BEFORE ANSWERING:\n" +
@@ -903,7 +908,7 @@ function buildQuerySystemAddon() {
 "  Payment Mode, Refund Category, Upfront Payment (Yes / No), Refund Stage, PA, Manager,\n" +
 "  New / Alumni, OB Status, Refund Request Date  by learner, Orientation Date, First Class Date,\n" +
 "  Duration Bucket, Region, Deposit also refunded, Refund request received in Trial Window,\n" +
-"  Eligible as per refund policy, Sale Retained / Dropped, Student Retained / Dropped - For Retention\n\n" +
+"  Eligible as per refund policy, Sale Retained / Dropped, Student Retained / Dropped - For Retention, Visa Status\n\n" +
 "ENROLLMENT COLUMNS: Program Type, Domain, Quarter, Year, Enrollment Month, Payment Category,\n" +
 "  Live Status, OB STATUS, Current SSA, Payment Mode\n\n" +
 "EXAMPLES:\n" +
@@ -923,6 +928,15 @@ function buildQuerySystemAddon() {
 'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Course"}\n' +
 "Q: Quarter-wise table for all domains with enrollments AND refunds:\n" +
 'QUERY{"dataset":"enrollments","operation":"groupby","groupby":["Domain","Quarter"]} and QUERY{"dataset":"refunds","operation":"groupby","groupby":["Course","Quarter"]}\n\n' +
+"VISA STATUS QUERY EXAMPLES:\n" +
+"Q: Which visa status has most refunds?\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Visa Status"}\n' +
+"Q: H-1B refunds by quarter:\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Quarter","filters":[{"col":"Visa Status","op":"eq","val":"H-1B"}]}\n' +
+"Q: Visa status breakdown by refund category:\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":["Visa Status","Refund Category"],"filters":[{"col":"Visa Status","op":"neq","val":"Did not fill the form"}]}\n' +
+"Q: Which course has most H-1B refunds:\n" +
+'QUERY{"dataset":"refunds","operation":"groupby","groupby":"Course","filters":[{"col":"Visa Status","op":"eq","val":"H-1B"}]}\n\n' +
 "CRITICAL RULES FOR GROUPBY QUERIES:\n" +
 "1. When asked for ALL courses, ALL domains, or ALL program types  -  do NOT add a course/domain/program type filter. Just groupby that column with no filter (or only date/quarter filters). The engine returns every unique value automatically.\n" +
 "   WRONG: groupby Course with filter Course=in[TPM,EM,Fullstack...]  -  this misses courses\n" +
